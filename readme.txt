@@ -4,7 +4,7 @@ Donate link: http://johnluetke.net
 Tags: import, college, publisher
 Requires at least: 2.7.1
 Tested up to: 2.7.1
-Stable tag: trunk
+Stable tag: 1.0
 
 Import your College Publisher archives into Wordpress
 
