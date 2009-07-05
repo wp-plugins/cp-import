@@ -8,6 +8,8 @@ Author: John Luetke
 Author URI: http://johnluetke.net
 */
 
+global $wpdb;
+
 function cp_import_admin_menu() {
 	require_once ABSPATH . '/wp-admin/admin-functions.php';
 	add_management_page('CP Import', 'CP Import', 9, __FILE__, 'cp_import_init');
@@ -104,6 +106,121 @@ class CP_Import {
 	
 	function ui_donate () {
 		echo "<div style='float: left; width: 150px; text-align: center; margin-left: 10px; padding: 10px; background-color: #FFFAD4; border:1px solid #FF2700;'><h3>Please Donate</h3><form action='https://www.paypal.com/cgi-bin/webscr' method='post'><input type='hidden' name='cmd' value='_s-xclick'><input type='hidden' name='hosted_button_id' value='5789559'><input type='image' src='https://www.paypal.com/en_US/i/btn/btn_donateCC_LG.gif' border='0' name='submit' alt='PayPal - The safer, easier way to pay online!'><img alt='' border='0' src='https://www.paypal.com/en_US/i/scr/pixel.gif' width='1' height='1'></form><p>Thanks for using CP Import. I hope it saves you the headache experienced by me and others before me who have moved their newspapers from College Publisher to Wordpress.</p><p> Over 20 hours of coding, debugging, testing, and more debugging went into the creation of this plugin, and you'll be up and running in a fraction of that time. Please consider donating.</div>";
+	}
+
+	/*
+	 * ui_options()
+	 *
+	 * Displays customizable settings for CP Import's behavior
+	 *
+	 * @since 1.1
+	 */
+	function ui_options () {
+		$this->ui_header();
+?>
+		<div class='narrow' style='float: left;'>
+			<h3><?php echo _('Options');?></h3>
+			<form action="tools.php?page=cp-import/cp-import.php&amp;step=options&amp;saved=1" method="post">
+			<?php
+			if ($_POST) {
+
+				echo "<pre>".print_r($_POST, true)."</pre>";
+			
+				$this->update_option("cp_import_user", $_POST['create_users']);
+				$this->update_option("cp_import_default_user", $_POST['default_user']);
+				$this->update_option("cp_import_username_before", $_POST['username_before']);
+				$this->update_option("cp_import_username_after", $_POST['username_after']);
+				$this->update_option("cp_import_paper_id", $_POST['paper_id']);
+
+				if ($_POST['url_structure'] == 1) // CP URL's
+					$this->update_option("permalink_structure", "/media/storage/paper".$_POST['paper_id']."/news/%year%/%monthnum%/%day%/%category%/%postname%-%post_id%.shtml");
+			?>
+			<div id="message" class="updated fade"> 
+				<strong><p>Options Saved!</p></strong>
+
+			</div>
+			<?php
+			
+			}
+			?>
+			
+			<table>
+				<tr>
+					<td width="20%">Import Authors as:</td>
+					<td width="20%">
+						<input type="radio" name="create_users" value="accounts" group="create_users" <?php echo ((get_option("cp_import_user") == "accounts") ? "checked='checked' " : ""); ?>/>&nbsp;Wordpress Accounts<br />
+						<input type="radio" name="create_users" value="fields" group="create_users" <?php echo ((get_option("cp_import_user") == "fields") ? "checked='checked' " : ""); ?>/>&nbsp;Custom Field<br />
+						<input type="radio" name="create_users" value="none" group="create_users" <?php echo ((get_option("cp_import_user") == "none") ? "checked='checked' " : ""); ?>/>&nbsp;None
+					</td>
+					<td width="40%">
+						CP Import can either create a Wordpress User account for each author that it finds, or add that information to each post as a custom field.<br /><br />More options are below if you choose "Wordpress Account". If you choose "Custom Field", author data will be imported as-is from you Archive file.
+					</td>
+				</tr>
+				<tr><td>&nbsp;</td></tr>
+				<tr>
+					<td>Default User Account:</td>
+					<td>
+						<?php $this->ui_userlist(); ?>
+					</td>
+					<td>
+						If any kind of error occurs while attempting to import author data, which account should be the default?
+					</td>
+				</tr>
+				<tr><td>&nbsp;</td></tr>
+				<tr>
+					<td>Username Format:</td>
+					<td>
+						<input type="text" name="username_before" size="15" value="<?php echo get_option('cp_import_username_before');?>"/>
+						%username%
+						<input type="text" name="username_after" size="15" value="<?php echo get_option('cp_import_username_after');?>"/>
+					</td>
+					<td>
+						If importing authors as Wordpress accounts, how should thier username be formatted? <strong>%username%</strong> is automatically created by CP Import as <pre>firstname.lastname</pre>
+					</td>
+				</tr>
+				<tr><td>&nbsp;</td></tr>
+				<tr><td>&nbsp;</td></tr>
+				<tr>
+					<td>CP URL Structure?</td>
+					<td>
+						<input type="checkbox" name="url_structure" value="1" />&nbsp;Enabled&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;CP Paper ID: <input type="text" size="5" maxlength="4" name="paper_id" value="<?php echo get_option("cp_import_paper_id");?>" />
+					</td>
+					<td>
+						Would you like CP Import to set your permalink structure to mimic that of College Publisher? (Experimental).<br /><br />You can come back to change this later without having to re-import your articles.
+					</td>
+				</tr>
+				<tr><td>&nbsp;</td></tr>
+				<tr><td>&nbsp;</td></tr>
+				<tr>
+					<td>
+						<input type="submit" value="Save Options" class="button" />
+					</td>
+				</tr>
+			</table>
+			</form>
+		</div>
+<?php
+		$this->ui_donate();
+		$this->ui_footer();
+
+	}
+
+	function ui_userlist() {
+		global $wpdb;
+	
+		$users = $wpdb->get_col( $wpdb->prepare("SELECT $wpdb->users.ID FROM $wpdb->users ORDER BY %s ASC", "display_name" ));
+
+		$xhtml = "<select name='default_user'>";
+
+		foreach ($users as $user) {
+			
+			$user = get_userdata( $user );
+			$xhtml .= "<option value='".$user->ID."' ".((get_option("cp_import_default_user") == $user->ID) ? "checked='checked'" : "")."/>".(($user->first_name) ? $user->display_name : $user->user_login);
+		}
+
+		$xhtml .= "</select>";
+
+		echo $xhtml;
 	}
 	
 	/*
@@ -264,6 +381,26 @@ class CP_Import {
 		$reader->setUTFEncoder('iconv');
 		$reader->setOutputEncoding('UTF-8');
 		return $reader;
+	}
+
+	/*
+	 * update_option
+	 *
+	 * Saves or Creates a Wordpress option
+	 *
+	 * @since 1.1
+	 */
+	function update_option($opt_name, $opt_value) {
+		
+		if ( get_option($opt_name) ) {
+			update_option($opt_name, $opt_value);
+		}
+		else {
+			$deprecated=' ';
+			$autoload='no';
+			add_option($opt_name, $opt_value, $deprecated, $autoload);
+		}
+
 	}
 
 	/*
@@ -507,7 +644,7 @@ class CP_Import {
 	 *
 	 * The main event! This displays the steps, and processes the articles.
 	 */
-	function go () {
+	function go() {
 		
 		// determine the step we are one
 		if (empty($_GET['step']))
@@ -516,6 +653,9 @@ class CP_Import {
 			$this->step = (int) $_GET['step'];
 
 		switch ( $this->step ) {
+			case 'options':
+				$this->ui_options();
+				break;
 			case 1:
 			default:
 				$this->ui_step1();
