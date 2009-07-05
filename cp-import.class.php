@@ -6,6 +6,12 @@
  *
  * @copyright 2009 John Luetke < john@johnluetke.net >
  *
+ * $URL$
+ * $Revision$
+ * $Date$
+ * $Author$
+ *
+ *
  * @filesource
  */
 
@@ -101,14 +107,14 @@ class CP_Import {
 
 				echo "<pre>".print_r($_POST, true)."</pre>";
 			
-				$this->update_option("cp_import_user", $_POST['create_users']);
-				$this->update_option("cp_import_default_user", $_POST['default_user']);
-				$this->update_option("cp_import_username_before", $_POST['username_before']);
-				$this->update_option("cp_import_username_after", $_POST['username_after']);
-				$this->update_option("cp_import_paper_id", $_POST['paper_id']);
+				update_option("cp_import_user", $_POST['create_users']);
+				update_option("cp_import_default_user", $_POST['default_user']);
+				update_option("cp_import_username_before", $_POST['username_before']);
+				update_option("cp_import_username_after", $_POST['username_after']);
+				update_option("cp_import_paper_id", $_POST['paper_id']);
 
 				if ($_POST['url_structure'] == 1) // CP URL's
-					$this->update_option("permalink_structure", "/media/storage/paper".$_POST['paper_id']."/news/%year%/%monthnum%/%day%/%category%/%postname%-%post_id%.shtml");
+					update_option("permalink_structure", "/media/storage/paper".$_POST['paper_id']."/news/%year%/%monthnum%/%day%/%category%/%postname%-%post_id%.shtml");
 			?>
 			<div id="message" class="updated fade"> 
 				<strong><p>Options Saved!</p></strong>
@@ -359,24 +365,6 @@ class CP_Import {
 	}
 
 	/*
-	 * update_option
-	 *
-	 * Saves or Creates a Wordpress option
-	 *
-	 * @since 1.1
-	 */
-	function update_option($opt_name, $opt_value) {
-		
-		if ( get_option($opt_name) ) {
-			update_option($opt_name, $opt_value);
-		}
-		else {
-			add_option($opt_name, $opt_value, ' ', 'no');
-		}
-
-	}
-
-	/*
 	 * process_date
 	 *
 	 * Formats the date according to $this->date_format
@@ -617,13 +605,15 @@ class CP_Import {
 	 *
 	 * The main event! This displays the steps, and processes the articles.
 	 */
-	function go() {
+	function go($step) {
 		
 		// determine the step we are one
 		if (empty($_GET['step']))
 			$this->step = 1;
-		else
-			$this->step = (int) $_GET['step'];
+		else if (!is_empty($step))
+                        $this->step = $step;
+                else
+		        $this->step = (int) $_GET['step'];
 
 		switch ( $this->step ) {
 			case 'options':
