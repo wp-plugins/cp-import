@@ -105,20 +105,30 @@ class CP_Import {
 			<?php
 			if ($_POST) {
 
-				echo "<pre>".print_r($_POST, true)."</pre>";
-			
 				update_option("cp_import_user", $_POST['create_users']);
 				update_option("cp_import_default_user", $_POST['default_user']);
 				update_option("cp_import_username_before", $_POST['username_before']);
 				update_option("cp_import_username_after", $_POST['username_after']);
 				update_option("cp_import_paper_id", $_POST['paper_id']);
 
-				if ($_POST['url_structure'] == 1) // CP URL's
-					update_option("permalink_structure", "/media/storage/paper".$_POST['paper_id']."/news/%year%/%monthnum%/%day%/%category%/%postname%-%post_id%.shtml");
+				if ($_POST['url_structure'] == 1) { // CP URL's
+					switch ($_POST['import_from']) {
+						case 4:
+						default:
+							$permalink = "/media/storage/paper".get_option('cp_import_paper_id')."/news/%year%/%monthnum%/%day%/%category%/%postname%-%post_id%.shtml";
+							break;
+						case 5:
+							$permalink = "/%category%/%postname%-1.%post_id%";
+							break;
+					}
+					update_option("permalink_structure", $permalink);
+				}
 			?>
 			<div id="message" class="updated fade"> 
 				<strong><p>Options Saved!</p></strong>
-
+				<?php if ($_POST['url_structure'] == 1) { ?>
+				<p><strong>Addtional Action Required:</strong> To activate your new Permalink style, you need to go to the <a href="options-permalink.php">Permalink Page</a> and click "Save Changes".</p>
+				<?php } ?>
 			</div>
 			<?php
 			
@@ -127,13 +137,19 @@ class CP_Import {
 			
 			<table>
 				<tr>
-					<td width="20%">Import Authors as:</td>
-					<td width="20%">
+					<td width="20%">Import From:</td>
+					<td width="20%"><input type="radio" name="import_from" value="4" checked="checked"/>&nbsp;CP 4<br/><input type="radio" name="import_from" value="5" disabled="disabled"/>&nbsp;CP 5</td>
+					<td width="40%">Which version of College Publisher are you importing from?</td>
+				</tr>
+				<tr><td>&nbsp;</td></tr>
+				<tr>
+					<td>Import Authors as:</td>
+					<td>
 						<input type="radio" name="create_users" value="accounts" group="create_users" <?php echo ((get_option("cp_import_user") == "accounts") ? "checked='checked' " : ""); ?>/>&nbsp;Wordpress Accounts<br />
 						<input type="radio" name="create_users" value="fields" group="create_users" <?php echo ((get_option("cp_import_user") == "fields") ? "checked='checked' " : ""); ?>/>&nbsp;Custom Field<br />
 						<input type="radio" name="create_users" value="none" group="create_users" <?php echo ((get_option("cp_import_user") == "none") ? "checked='checked' " : ""); ?>/>&nbsp;None
 					</td>
-					<td width="40%">
+					<td>
 						CP Import can either create a Wordpress User account for each author that it finds, or add that information to each post as a custom field.<br /><br />More options are below if you choose "Wordpress Account". If you choose "Custom Field", author data will be imported as-is from you Archive file.
 					</td>
 				</tr>
@@ -196,7 +212,7 @@ class CP_Import {
 		foreach ($users as $user) {
 			
 			$user = get_userdata( $user );
-			$xhtml .= "<option value='".$user->ID."' ".((get_option("cp_import_default_user") == $user->ID) ? "checked='checked'" : "")."/>".(($user->first_name) ? $user->display_name : $user->user_login);
+			$xhtml .= "<option value='".$user->ID."' ".((get_option("cp_import_default_user") == $user->ID) ? "selected='selected'" : "")."/>".(($user->first_name) ? $user->display_name : $user->user_login);
 		}
 
 		$xhtml .= "</select>";
@@ -610,7 +626,7 @@ class CP_Import {
 		// determine the step we are one
 		if (empty($_GET['step']))
 			$this->step = 1;
-		else if (!is_empty($step))
+		else if (isset($step))
                         $this->step = $step;
                 else
 		        $this->step = (int) $_GET['step'];

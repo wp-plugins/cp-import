@@ -9,6 +9,7 @@ Author URI: http://johnluetke.net
 */
 
 global $wpdb;
+require("cp-import.class.php");
 
 function cp_import_admin_menu() {
 	require_once ABSPATH . '/wp-admin/admin-functions.php';
@@ -19,8 +20,15 @@ function cp_import_admin_menu() {
 function cp_import_init() {
 	$CPImporter = new CP_Import();
 	
-	$CPImporter->go();
+	@$CPImporter->go();
 }
 
 add_action('admin_menu', 'cp_import_admin_menu');
+
+add_option("cp_import_from", "4", "", "no");
+add_option("cp_import_user", "accounts", "", "no");
+add_option("cp_import_paper_id", "", "", "no");
+add_option("cp_import_default_user", "1", "", "no");
+add_option("cp_import_username_before", "", "", "no");
+add_option("cp_import_username_after", "", "", "no");
 ?>
