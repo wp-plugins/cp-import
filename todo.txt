@@ -1,11 +1,6 @@
-CP Import To do list:
+CP Import To-Do list:
 
-- eliminate the need for Excel.
-- eliminate need to re-upload media file should it already exist
-- add options for to import users as:
-	- accounts
-	- custom fields
-	- none
-- set permalink structure as CP url style
-- set custom field for each post that contains CP article id
+- Eliminate the need for Excel.
+- Eliminate need to re-upload media file should it already exist
+- Set custom field for each post that contains CP Article ID.
 
