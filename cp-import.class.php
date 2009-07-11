@@ -2,7 +2,7 @@
 /**
  * CP Import
  *
- * @package net.johnluetke.software.wordpress.cpimport
+ * @package net.johnluetke.software.wordpress.cp-import
  *
  * @copyright 2009 John Luetke < john@johnluetke.net >
  *
@@ -10,7 +10,6 @@
  * $Revision$
  * $Date$
  * $Author$
- *
  *
  * @filesource
  */
@@ -138,59 +137,59 @@ class CP_Import {
 			
 			<table>
 				<tr>
-					<td width="20%">Import From:</td>
-					<td width="20%"><input type="radio" name="import_from" value="4" checked="checked"/>&nbsp;CP 4<br/><input type="radio" name="import_from" value="5" disabled="disabled"/>&nbsp;CP 5</td>
-					<td width="40%">Which version of College Publisher are you importing from?</td>
+					<td valign="top"  width="20%">Import From:</td>
+					<td valign="top"  width="20%"><input type="radio" name="import_from" value="4" checked="checked"/>&nbsp;CP 4<br/><input type="radio" name="import_from" value="5" disabled="disabled"/>&nbsp;CP 5</td>
+					<td valign="top"  width="40%">Which version of College Publisher are you importing from?</td>
 				</tr>
-				<tr><td>&nbsp;</td></tr>
+				<tr><td valign="top" >&nbsp;</td></tr>
 				<tr>
-					<td>Import Authors as:</td>
-					<td>
+					<td valign="top" >Import Authors as:</td>
+					<td valign="top" >
 						<input type="radio" name="create_users" value="accounts" group="create_users" <?php echo ((get_option("cp_import_user") == "accounts") ? "checked='checked' " : ""); ?>/>&nbsp;Wordpress Accounts<br />
 						<input type="radio" name="create_users" value="fields" group="create_users" <?php echo ((get_option("cp_import_user") == "fields") ? "checked='checked' " : ""); ?>/>&nbsp;Custom Field<br />
 						<input type="radio" name="create_users" value="none" group="create_users" <?php echo ((get_option("cp_import_user") == "none") ? "checked='checked' " : ""); ?>/>&nbsp;None
 					</td>
-					<td>
+					<td valign="top" >
 						CP Import can either create a Wordpress User account for each author that it finds, or add that information to each post as a custom field.<br /><br />More options are below if you choose "Wordpress Account". If you choose "Custom Field", author data will be imported as-is from you Archive file.
 					</td>
 				</tr>
-				<tr><td>&nbsp;</td></tr>
+				<tr><td valign="top" >&nbsp;</td></tr>
 				<tr>
-					<td>Default User Account:</td>
-					<td>
+					<td valign="top" >Default User Account:</td>
+					<td valign="top" >
 						<?php $this->ui_userlist(); ?>
 					</td>
-					<td>
+					<td valign="top" >
 						If any kind of error occurs while attempting to import author data, or you chose to import article authors as Custom fields, which account should be used?
 					</td>
 				</tr>
-				<tr><td>&nbsp;</td></tr>
+				<tr><td valign="top" >&nbsp;</td></tr>
 				<tr>
-					<td>Username Format:</td>
-					<td>
+					<td valign="top" >Username Format:</td>
+					<td valign="top" >
 						<input type="text" name="username_before" size="15" value="<?php echo get_option('cp_import_username_before');?>"/>
 						%username%
 						<input type="text" name="username_after" size="15" value="<?php echo get_option('cp_import_username_after');?>"/>
 					</td>
-					<td>
+					<td valign="top" >
 						If importing authors as Wordpress accounts, how should thier username be formatted? <strong>%username%</strong> is automatically created by CP Import as <pre>firstname.lastname</pre>
 					</td>
 				</tr>
-				<tr><td>&nbsp;</td></tr>
-				<tr><td>&nbsp;</td></tr>
+				<tr><td valign="top" >&nbsp;</td></tr>
+				<tr><td valign="top" >&nbsp;</td></tr>
 				<tr>
-					<td>CP URL Structure?</td>
-					<td>
+					<td valign="top" >CP URL Structure?</td>
+					<td valign="top" >
 						<input type="checkbox" name="url_structure" value="1" />&nbsp;Enabled&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;CP Paper ID: <input type="text" size="5" maxlength="4" name="paper_id" value="<?php echo get_option("cp_import_paper_id");?>" />
 					</td>
-					<td>
+					<td valign="top" >
 						Would you like CP Import to set your permalink structure to mimic that of College Publisher? (Experimental).<br /><br />You can come back to change this later without having to re-import your articles.
 					</td>
 				</tr>
-				<tr><td>&nbsp;</td></tr>
-				<tr><td>&nbsp;</td></tr>
+				<tr><td valign="top" >&nbsp;</td></tr>
+				<tr><td valign="top" >&nbsp;</td></tr>
 				<tr>
-					<td>
+					<td valign="top" >
 						<input type="submit" value="Save Options" class="button" />
 					</td>
 				</tr>
