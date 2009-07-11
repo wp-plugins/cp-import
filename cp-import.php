@@ -1,12 +1,24 @@
 <?php
 /*
-Plugin Name: CP Import
-Version: 1.0
-Plugin URI: http://johnluetke.net/software/cp-import
-Description: CP Import allows you to import your <b>articles, authors, categories, and media<b> from a College Publisher export file <br />[<a href="tools.php?page=cp-import/cp-import.php">Import</a> | <a href="http://johnluetke.net/software/cp-import">Help</a>]
-Author: John Luetke
-Author URI: http://johnluetke.net
-*/
+ * Plugin Name: CP Import
+ * Version: 1.0
+ * Plugin URI: http://johnluetke.net/software/cp-import
+ * Description: CP Import allows you to import your <b>articles, authors, categories, and media<b> from a College Publisher export file <br />[<a href="tools.php?page=cp-import/cp-import.php">Import</a> | <a href="http://johnluetke.net/software/cp-import">Help</a>]
+ * Author: John Luetke
+ * Author URI: http://johnluetke.net
+ *
+ * @package net.johnluetke.software.wordpress.cpimport
+ *
+ * @copyright 2009 John Luetke < john@johnluetke.net >
+ *
+ * $URL$
+ * $Revision$
+ * $Date$
+ * $Author$
+ *
+ *
+ * @filesource
+ */
 
 global $wpdb;
 require("cp-import.class.php");
@@ -31,4 +43,5 @@ add_option("cp_import_paper_id", "", "", "no");
 add_option("cp_import_default_user", "1", "", "no");
 add_option("cp_import_username_before", "", "", "no");
 add_option("cp_import_username_after", "", "", "no");
+add_option("cp_import_media_file", "", "", "no");
 ?>

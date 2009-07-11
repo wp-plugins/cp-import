@@ -72,6 +72,7 @@ class CP_Import {
 	function ui_header() {
 		echo "<div class='wrap'>\n";
 		echo "<h2>".__('CP Import')."</h2>";
+		echo "<p><a href=\"tools.php?page=cp-import/cp-import.php&amp;step=options\">".__('Options')."</a></p>";
 	}
 
 	/*
@@ -160,7 +161,7 @@ class CP_Import {
 						<?php $this->ui_userlist(); ?>
 					</td>
 					<td>
-						If any kind of error occurs while attempting to import author data, which account should be the default?
+						If any kind of error occurs while attempting to import author data, or you chose to import article authors as Custom fields, which account should be used?
 					</td>
 				</tr>
 				<tr><td>&nbsp;</td></tr>
@@ -244,6 +245,7 @@ class CP_Import {
 		echo "<p>".__('Note that this version of CP Import was built using export files from College Publisher 4.0, and thus is untested with export files from CP 5. If you are coming from CP 5, please proceed at your own risk. If you can get me your export files, I will try to make this compatible with CP 5.')."</p>";
 		
 		echo "<h3>".__('Prerequisite Actions')."</h3>";
+		echo "<p>".__('Be sure to check out the <a href="tools.php?page="cp-import/cp-import.php&amp;step=options">Options</a> page before importing to customize CP Import\'s behavior.')."</p>";
 		echo "<p>".__('The following things must be done <b><i>BEFORE</i></b> you begin using this plugin:')."</p>";
 		echo "<ol>";
 		echo "<li>".__('1. Upload the contents of your media folder to <b>wp_content/cp-import/</b>. Be warned: This will take a <i>long</i> time.')."</li>";
