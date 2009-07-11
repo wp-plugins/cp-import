@@ -24,6 +24,7 @@ require("excel-reader.php");
  */
 class CP_Import {
 
+
 	/**
 	 * @var array $articles
 	 */
@@ -48,6 +49,22 @@ class CP_Import {
 	 * @var string $media_dir
 	 */
 	var $media_dir;
+
+	/**
+	 * @var string $cp4link
+	 */
+	var $cp4link;
+
+
+	/**
+	 * @var string $cp5link
+	 */
+	var $cp5link;
+
+
+
+	var $wpdb;
+	var $DEBUG = 1;
 	
 
 	/*
@@ -58,7 +75,17 @@ class CP_Import {
 	 * @since 1.0
 	 */
 	function CP_Import () {
+		global $wpdb;
+		
 		$this->date_format = "Y-m-d H:i:s";
+		$this->cp4link = "/media/storage/paper".get_option('cp_import_paper_id')."/news/%year%/%monthnum%/%day%/%category%/%postname%-%post_id%.shtml";
+		$this->cp5link = "/%category%/%postname%-1";
+		
+		$this->media_dir = WP_CONTENT_DIR."/cp-import/";
+		$this->media_file = $_GET['media'];
+		$this->archive_file = $_GET['archive'];
+		
+		$this->wpdb = $wpdb;
 	}
 
 	/*
@@ -71,7 +98,7 @@ class CP_Import {
 	function ui_header() {
 		echo "<div class='wrap'>\n";
 		echo "<h2>".__('CP Import')."</h2>";
-		echo "<p><a href=\"tools.php?page=cp-import/cp-import.php&amp;step=options\">".__('Options')."</a></p>";
+		echo "<p><a href=\"tools.php?page=cp-import/cp-import.php&amp;step=1\">".__('Main')."</a>&nbsp;|&nbsp;<a href=\"tools.php?page=cp-import/cp-import.php&amp;step=options\">".__('Options')."</a></p>";
 	}
 
 	/*
@@ -115,13 +142,12 @@ class CP_Import {
 					switch ($_POST['import_from']) {
 						case 4:
 						default:
-							$permalink = "/media/storage/paper".get_option('cp_import_paper_id')."/news/%year%/%monthnum%/%day%/%category%/%postname%-%post_id%.shtml";
+							update_option("permalink_structure", $this->cp4link);
 							break;
 						case 5:
-							$permalink = "/%category%/%postname%-1.%post_id%";
+							update_option("permalink_structure", $this->cp5link);
 							break;
 					}
-					update_option("permalink_structure", $permalink);
 				}
 			?>
 			<div id="message" class="updated fade"> 
@@ -247,14 +273,19 @@ class CP_Import {
 		echo "<p>".__('Be sure to check out the <a href="tools.php?page="cp-import/cp-import.php&amp;step=options">Options</a> page before importing to customize CP Import\'s behavior.')."</p>";
 		echo "<p>".__('The following things must be done <b><i>BEFORE</i></b> you begin using this plugin:')."</p>";
 		echo "<ol>";
-		echo "<li>".__('1. Upload the contents of your media folder to <b>wp_content/cp-import/</b>. Be warned: This will take a <i>long</i> time.')."</li>";
-		echo "<li>".__('2. Open your archive file in a text editor. Search for an area where a line break is, highlight only the whitespace around that line break, and copy it. (See screenshot-5.png)');
-		echo "<li>".__('2-1. Perform a "Search and Replace". Paste the whitespace that you copied in the "Search for" field, and leave the "Replace" field blank.');
+		echo "<li>".__('Upload the contents of your media folder to <b>wp_content/cp-import/</b>. Be warned: This will take a <i>long</i> time.')."</li>";
+		echo "<li>".__('Open your archive file in a text editor. Search for an area where a line break is, highlight only the whitespace around that line break, and copy it. (See screenshot-5.png)');
+		echo "<ol>";
+		echo "<li>".__('Perform a "Search and Replace". Paste the whitespace that you copied in the "Search for" field, and leave the "Replace" field blank.');
 		
-		echo "<li>".__('2-2. Save the file with a new name.');
-		echo "<li>".__('3. Open your archive file with Excel, and save the file as <b>.xls</b> (NOT <b>.xslx</b>)')."</li>";
-		echo "<li>".__('   <i>NOTE</i>: If Excel crashes while trying to open the file, you will have to break it into smaller pieces. Use your own discretion here.')."</li>";
-		echo "<li>".__('3-1. Open your media file with Excel, and also save it in <b>.xls</b> format.')."</li>";
+		echo "<li>".__('Save the file with a new name.');
+		echo "</ol>";
+		echo "<li>".__('Open your archive file with Excel, and save the file as <b>.xls</b> (NOT <b>.xslx</b>)')."</li>";
+		echo "<ol>";
+		echo "<li>".__('<i>NOTE</i>: If Excel crashes while trying to open the file, you will have to break it into smaller pieces. Use your own discretion here.')."</li>";
+		echo "<li>".__('Open your media file with Excel, and also save it in <b>.xls</b> format.')."</li>";
+		echo "</ol>";
+		echo "</ol>";
 		echo "<h3>".__('Step 4: Upload your archive file')."</h3>";
 		
 		wp_import_upload_form("tools.php?page=cp-import/cp-import.php&amp;step=2");
@@ -266,7 +297,7 @@ class CP_Import {
 	/*
 	 * ui_step2
 	 *
-	 * Grabs the uploaded archive file from ui_step1, and prompts for the user to upload their media folder to wp-content/cp-import/ and thier media file using a form
+	 * Grabs the uploaded archive file from ui_step1, and prompts for the user to upload their media folder to $this->media_dir and thier media file using a form
 	 *
 	 * @since 1.0
 	 */
@@ -276,20 +307,32 @@ class CP_Import {
 		
 		$file = wp_import_handle_upload();
 
-		if (isset($file['file'])) {
+		if ( isset($file['file']) || isset($_GET['archive']) ) {
 				
 			echo "<p>".__('Your archive file has been successfully uploaded!')."</p>";
-			echo "<p>".__('Now, we need to upload your media file.')."</p>";
-			echo "<p>".__('<b>REMEMBER</b> to upload the contents of your media <u>folder</u> (paperXXXX) to wp-content/cp-import/. The importer will look for the files referenced in your media <u>file</u> in this location. <b>Do this before uploading your media <u>file</u> below!</b>')."</p>";
-			
-			echo "<h3>".__('Step 5: Upload Your Media File')."</h3>";
-			
-			wp_import_upload_form("tools.php?page=cp-import/cp-import.php&amp;step=3&archive=".$file['file']);
-		}
-		else {
-			echo "<p>".__('It seems that you didn\'t upload your archive file. Was it too big? If so, remember that you need to split it up into smaller chunks')."</p>";
-		}
 
+			if ($_GET['newfile'] == 1) {
+				update_option("cp_import_media_file", "");
+			}
+
+			if (strlen(get_option("cp_import_media_file"))) {
+				// User has already uploaded a media file
+				echo "<p>".__('CP Import has detected that you already uploaded a media file:')."</p>";
+				echo "<pre>".get_option("cp_import_media_file")."</pre>";
+				echo "<p><a href=\"tools.php?page=cp-import/cp-import.php&amp;step=3&amp;archive=".$file['file']."\">".__('Yes, I want to use this file')."</a></p>";
+				echo "<p><a href=\"tools.php?page=cp-import/cp-import.php&amp;step=2&amp;newfile=1&amp;archive=".$file['file']."\">".__('No, I want to use a different file')."</a></p>";
+			}
+			else {
+				echo "<p>".__('Now, we need to upload your media file and folder.')."</p>";
+				
+				echo "<p>".__('<b>REMEMBER</b> to upload the contents of your media <u>folder</u> (paperXXXX) to '.$this->media_dir.'. The importer will look for the files referenced in your media <u>file</u> in this location.');
+				
+				echo "<b>".__('Do this before uploading your media <u>file</u> below!</b>')."</p>";		
+				echo "<h3>".__('Step 5: Upload Your Media File')."</h3>";
+							
+				wp_import_upload_form("tools.php?page=cp-import/cp-import.php&amp;step=3&archive=".$file['file']);
+			}
+		}
 		echo "</div>";
 		$this->ui_donate();
 		$this->ui_footer();
@@ -312,8 +355,7 @@ class CP_Import {
 
 			$this->archive_file = $_GET['archive'];
 			$this->media_file = $file['file'];
-			$this->media_dir = WP_CONTENT_DIR."/cp-import";
-				
+			update_option("cp_import_media_file", $this->media_file);
 			echo "<p>".__('Media file successfully uploaded!')."</p>";
 					
 			echo "<h3>".__('Step 6: Verify that everything is here')."</h3>";
@@ -410,12 +452,16 @@ class CP_Import {
 	 * @since 1.0
 	 */
 	function process_author ( $article ) {
+
+		$article['post_author_name'] = $article['post_author'];
+	
 		$first_name = substr($article['post_author'], 0, strpos($article['post_author'], " "));
 		$last_name = substr($article['post_author'], strpos($article['post_author'], " ")+1, strlen($article['post_author']));
 		$article['post_author'] = strtolower($first_name.".".$last_name);
 	
 		// Remove apostrophe's from author's name
 		$article['post_author'] = $this->filter_content($article['post_author'],"'","");
+		$article['post_author'] = $this->filter_content($article['post_author']," ","");
 
 		return $article;
 	}
@@ -423,10 +469,17 @@ class CP_Import {
 	/*
 	 * get_user_id
 	 *
-	 * Queries the Wordpress database to see if a user with the name of the article's author exists.
-	 * If not, create a new user with that name and a random password. If so, grab the existing user_id.
+	 * The function adheres to the "cp_import_user" option
 	 *
-	 * In either case, the key 'post_author' will be replaced with the Wordpress user ID.
+	 * If set to "accounts", it will ueries the Wordpress database to see if a user with the name of the article's author exists.
+	 * If it does not exist, then create a new user with that name and a random password. If so, grab the existing user_id.
+	 *
+	 * If set to "fields", it will attach the author's name as specified in the archive file to the post as a custom field. The author
+	 * will be set to the ID saved in "cp_import_default_user"
+	 *
+	 * If set to "none", this function will query the database to see if a user_id exists. If not, it will use the default id.
+	 *
+	 * In any case, the key 'post_author' will be replaced with the new Wordpress user ID.
 	 *
 	 * Additionally, this function will call $this->set_user_info, which modifies the username created with
 	 * $this->process_author (firstname.lastname) to First Name, Last Name.
@@ -441,20 +494,51 @@ class CP_Import {
 		$exists = username_exists($article['post_author']);
 		echo "&nbsp;&nbsp;&nbsp;".__('Searching for author "'.$article['post_author'].'"... ');
 		$name = $article['post_author'];
+
+		switch (get_option("cp_import_user")) {
+
+			case "accounts":
+			default:
+				if ($exists) {
+					$article['post_author'] = $exists;
+					echo __('found!')."<br/>";
+					$this->set_user_info($exists, $article['post_author_name']);
+ 				}
+				else {
+		                        $id = wp_create_user ($article['post_author'], md5(time()));
+				        $article['post_author'] = $id;
+				        echo __('new acount created!')."<br />";
+					$this->set_user_info($id, $name);
+				}
+				break;
+
+			case "fields":
+				if (strlen(get_option("cp_import_default_user")) > 0) {
+					$article['post_author'] = get_option("cp_import_default_user");
+				}
+				else {
+					$article['post_author'] = 1;
+				}
+				echo __('found!')."<br/>";
+				break;
+			case "none":
+				if ($exists) {
+					$article['post_author'] = $exists;
+					echo __('found!')."<br/>";
+					$this->set_user_info($exists, $article['post_author_name']);
+				}
+				else {
+					if (strlen(get_option("cp_import_default_user")) > 0) {
+				        	$article['post_author'] = get_option("cp_import_default_user");
+					}
+					else {
+					        $article['post_author'] = 1;
+					}
+				}
+				break;
+		}
 	
-		if ($exists) {
-			$article['post_author'] = $exists;
-			echo __('found!')."<br/>";
-			$this->set_user_info($exists, $name);
-			return $article;
-		}
-		else {
-			$id = wp_create_user ($article['post_author'], md5(time()));
-			$article['post_author'] = $id;
-			echo __('new acount created!')."<br />";
-			$this->set_user_info($id, $name);
-			return $article;
-		}
+		return $article;
 	}
 
 	/*
@@ -468,9 +552,10 @@ class CP_Import {
 	 * @since 1.0
 	 */
 	 function set_user_info ( $id, $name ) {
-		$data = explode(".", $name);
-		foreach ($data as $d)
-			$t['display_name'] .= ucfirst($d)." ";
+	 	if ($this->DEBUG)
+			echo "<pre>set_user_info(".$id.", ".$name.")</pre>";
+
+		$t['display_name'] = $name;
 		$t['ID'] = $id;
 
 		wp_update_user($t);
@@ -675,7 +760,7 @@ class CP_Import {
 						// Sets up an article object based on Wordpress specifications
 						$article = array();
 						
-						$article['cp_id']			= $row[1]; // only used for media association
+						$article['cp_id']		= $row[1]; // used for media association and as a custom field to each post
 						$article['post_title']		= $row[5];
 						$article['post_sub_title']	= $row[6];
 						$article['post_content']	= $row[8];
@@ -693,90 +778,139 @@ class CP_Import {
 						$article = $this->process_date(&$article);
 						$article = $this->process_author(&$article);
 			
-						// begin output
-						echo __('Importing article: <i>').$article['post_title'].__('...<br />');
-						// get the ID of this article's author
-						$article = $this->get_user_id(&$article);
-						// get / create the category that this article comes from
-						$article = $this->get_category_id(&$article);
-						echo "&nbsp;&nbsp;&nbsp;".__('Searching for media attachments...');
-						// search for media associated with this article. if found, simply append the [gallery]
-						// tag to the article's content
-						if (isset($a[$article['cp_id']])) {
-							echo sizeof($a[$article['cp_id']]).__(' found!')."<br />";
-							$article['post_content'] .= "<p>[gallery]</p>";
-						}
-						else
-							echo __('none found')."<br/>";
-						
-						// insert the article into the Wordpress database, and get it's new ID
-						$wp_id = wp_insert_post($article);
-						//echo "<pre>".print_r($article,true)."</pre>";
-						
-						// if this article had a subheadline, add it as a cumton field to the new post
-						if ( isset($article['post_sub_title']) )
-							add_post_meta($wp_id, 'subheadline', $article['post_sub_title']);
-						
-
-						//echo "<pre>".print_r($a[$article['cp_id']],true)."</pre>";
-						
-						// if the media XLS has media for this post, find it
-						if (isset($a[$article['cp_id']])) {
-						
-							// there could be muliple pieces of media per article, so loop
-							foreach ($a[$article['cp_id']] as $img) {
-						
-								$attach = array();
-								$attach['post_content'] = $img['caption']."<br /><br />Credit: ".$img['credit'];
-								$attach['post_title'] = "IMAGE: ".$article['post_title'];
-								$attach['post_author'] = $img['credit'];
-								$attach['comment_status'] = 'closed';
-								$attach['post_date'] = $article['post_date'];
-								$attach['post_date_gmt'] = $article['post_date'];
-								
-								$attach = $this->process_author(&$attach);
-								$attach = $this->get_user_id(&$attach);
+						// If the ID is not numeric, skip it
+						if (is_numeric($article['cp_id'])) {
+			
+							// begin output
+							echo __('Importing article: <i>').$article['post_title'].__('...<br />');
 							
-								echo "&nbsp;&nbsp;&nbsp;".__('Importing media...');
-								//echo "<pre>".print_r($img,true)."</pre>";
-								//echo "<pre>".print_r($attach,true)."</pre>";
-						
-								// make sure that the file refereneced exists
-								if (!file_exists(WP_CONTENT_DIR."/cp-import".$img['file']))
-									echo __('File not found: ')."<b>wp-content/cp-import".$img['file']."</b><br />";
-								else {
-									// determine paths where this media will be saved at
-									$rel_path = date("Y") . "/" . date("m") . "/" . basename ($img['file']);	
-									$dest_path = get_option('upload_path') . "/" . $rel_path;
+							// get the ID of this article's author
+							$article = $this->get_user_id(&$article);
+							
+							// get / create the category that this article comes from
+							$article = $this->get_category_id(&$article);
+							echo "&nbsp;&nbsp;&nbsp;".__('Searching for media attachments...');
+							
+							// search for media associated with this article. if found, simply append the [gallery]
+							// tag to the article's content
+							if (isset($a[$article['cp_id']])) {
+								echo sizeof($a[$article['cp_id']]).__(' found!')."<br />";
+								$article['post_content'] .= "<p>[gallery]</p>";
+							}
+							else
+								echo __('none found')."<br/>";
+							
+							// insert the article into the Wordpress database, and get it's new ID
+							$wp_id = wp_insert_post($article);
+							//echo "<pre>".print_r($article,true)."</pre>";
+
+							if (get_option("cp_import_from") == 4) {
+
+								// set the new article's ID to that of CP
+								$query = $this->wpdb->prepare("UPDATE ".$this->wpdb->posts." SET ID = %d WHERE ID = %d", $article['cp_id'], $wp_id);
+								$this->wpdb->query($query);
 								
-									// get the mime type. this is important 
-									$attach['post_mime_type'] = $this->get_mime(WP_CONTENT_DIR."/cp-import".$img['file']);
-									$attach['guid'] = get_option('siteurl') ."/". $dest_path;
+								// Update category for new ID
+								$query = $this->wpdb->prepare("UPDATE ".$this->wpdb->term_relationships." SET object_id = %d WHERE object_id = %d", $article['cp_id'], $wp_id);
+								$this->wpdb->query($query);
+								
+								// Update Post GUID to match CP URL structure.
+								// This has no effect if the user chose not to use CP URLS
+								$post_title = $this->wpdb->get_var($this->wpdb->prepare("SELECT post_name FROM ".$this->wpdb->posts." WHERE ID = %d", $article['cp_id']));
+								$post_title2 = explode("-", $post_title);
+								$post_title = "";
+								foreach ($post_title2 as $pt) {
+									$post_title .= ucfirst($pt).".";
+									if (strlen($post_title) > 80) {
+										$post_title = substr($post_title, 0, 80);
+										break;
+									}	
+								}
+
+								if (substr($post_title, strlen($post_title)-1) == ".")
+									$post_title = substr($post_title, 0, strlen($post_title)-1);
+	
+								$query = $this->wpdb->prepare("UPDATE ".$this->wpdb->posts." SET guid = %s WHERE ID = %d", $post_title, $article['cp_id']);
+								echo $query;
+								$wp_id = $article['cp_id'];
+							}
+
+echo "<pre>".print_r($this->wpdb,true)."</pre>";
+								
+								
+							// attach the paper's CP ID as a custom field
+							add_post_meta($wp_id, 'CP ID', $article['cp_id']);
+							
+							// if this article had a subheadline, add it as a cumton field to the new post
+							if ( isset($article['post_sub_title']) )
+								add_post_meta($wp_id, 'subheadline', $article['post_sub_title']);
+							
+							// if we are to attach author name as custom fields, do so
+							if ( get_option("cp_import_user") == "fields")
+								add_post_meta($wp_id, 'author', $article['post_author_name']);
+							
+							die();
+	
+							//echo "<pre>".print_r($a[$article['cp_id']],true)."</pre>";
+							
+							// if the media XLS has media for this post, find it
+							if (isset($a[$article['cp_id']])) {
+							
+								// there could be muliple pieces of media per article, so loop
+								foreach ($a[$article['cp_id']] as $img) {
+							
+									$attach = array();
+									$attach['post_content'] = $img['caption']."<br /><br />Credit: ".$img['credit'];
+									$attach['post_title'] = "IMAGE: ".$article['post_title'];
+									$attach['post_author'] = $img['credit'];
+										$attach['comment_status'] = 'closed';
+									$attach['post_date'] = $article['post_date'];
+									$attach['post_date_gmt'] = $article['post_date'];
 									
-									// copy the media from wp-content/cp-import to the Wordpress media repository
-									@copy (	WP_CONTENT_DIR."/cp-import".$img['file'],
-										ABSPATH . $dest_path );
-									// insert the media into the WP database
-									$attach_id = wp_insert_attachment($attach, false, $wp_id);
-									// generate basic metadata
-									$attach_meta = wp_generate_attachment_metadata( $attach_id, ABSPATH . $dest_path );
-									// update the generated meta data.
-									wp_update_attachment_metadata( $attach_id, $attach_meta);
-									// add another piece of metadata
-									add_post_meta($attach_id, "_wp_attached_file", $rel_path, true);
-									// we're done!
-									echo __('done!')."<br />";
+									$attach = $this->process_author(&$attach);
+									$attach = $this->get_user_id(&$attach);
+								
+									echo "&nbsp;&nbsp;&nbsp;".__('Importing media...');
+									//echo "<pre>".print_r($img,true)."</pre>";
+									//echo "<pre>".print_r($attach,true)."</pre>";
+							
+									// make sure that the file refereneced exists
+									if (!file_exists(WP_CONTENT_DIR."/cp-import".$img['file']))
+										echo __('File not found: ')."<b>wp-content/cp-import".$img['file']."</b><br />";
+									else {
+										// determine paths where this media will be saved at
+										$rel_path = date("Y") . "/" . date("m") . "/" . basename ($img['file']);	
+										$dest_path = get_option('upload_path') . "/" . $rel_path;
+									
+										// get the mime type. this is important 
+										$attach['post_mime_type'] = $this->get_mime(WP_CONTENT_DIR."/cp-import".$img['file']);
+										$attach['guid'] = get_option('siteurl') ."/". $dest_path;
+										
+										// copy the media from wp-content/cp-import to the Wordpress media repository
+										@copy (	WP_CONTENT_DIR."/cp-import".$img['file'],
+											ABSPATH . $dest_path );
+										// insert the media into the WP database
+										$attach_id = wp_insert_attachment($attach, false, $wp_id);
+										// generate basic metadata
+										$attach_meta = wp_generate_attachment_metadata( $attach_id, ABSPATH . $dest_path );
+										// update the generated meta data.
+										wp_update_attachment_metadata( $attach_id, $attach_meta);
+										// add another piece of metadata
+										add_post_meta($attach_id, "_wp_attached_file", $rel_path, true);
+										// we're done!
+										echo __('done!')."<br />";
+									}
 								}
 							}
-						}
-
-						// congratualtions!
-						echo "&nbsp;&nbsp;&nbsp;".__('done!')."</i><br/>";
-						$count++;
-			
+						
+							// congratualtions!
+							echo "&nbsp;&nbsp;&nbsp;".__('done!')."</i><br/>";
+							$count++;
+						} // end non-numeric
+				
 					}
 				}
-				
+					
 				echo "<p>".$count.__(' articles were successfully imported!')."</p>";
 				echo "<p>".__('Congratulations! Your CP archive has been successfully imported to Wordpress! Have fun!')."</p>";
 				echo "<p><a href='tools.php?page=cp-import/cp-import.php'>".__('Import again')."</a></p>";
