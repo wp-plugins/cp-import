@@ -516,7 +516,7 @@ class CP_Import {
 	}
 	
 	/*
-	 * formate_date
+	 * format_date
 	 *
 	 * Helper function. Do not call directly. @see process_date
 	 *
@@ -630,7 +630,7 @@ class CP_Import {
 		else if (isset($step))
                         $this->step = $step;
                 else
-		        $this->step = (int) $_GET['step'];
+		        $this->step = $_GET['step'];
 
 		switch ( $this->step ) {
 			case 'options':
