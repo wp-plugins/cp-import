@@ -51,6 +51,11 @@ class CP_Import {
 	var $media_dir;
 
 	/**
+	 * @var string $media_dir_h
+	 */
+	var $media_dir_h;
+
+	/**
 	 * @var string $cp4link
 	 */
 	var $cp4link;
@@ -77,15 +82,24 @@ class CP_Import {
 	function CP_Import () {
 		global $wpdb;
 		
+		$this->step = (isset($_GET['step'])) ? $_GET['step'] : 1;
+		
 		$this->date_format = "Y-m-d H:i:s";
 		$this->cp4link = "/media/storage/paper".get_option('cp_import_paper_id')."/news/%year%/%monthnum%/%day%/%category%/%postname%-%post_id%.shtml";
-		$this->cp5link = "/%category%/%postname%-1";
+		$this->cp5link = "/%category%/%postname%-1.%post_id%";
 		
 		$this->media_dir = WP_CONTENT_DIR."/cp-import/";
+		$this->media_dir_h = basename(dirname($this->media_dir)) . "/" . basename($this->media_dir) . "/";
 		$this->media_file = $_GET['media'];
 		$this->archive_file = $_GET['archive'];
 		
 		$this->wpdb = $wpdb;
+
+		$this->cp4url = $this->cp4link;
+		$this->cp5url = $this->cp5link;
+
+		if ($this->DEBUG)
+			echo "<pre>".print_r($this, true)."</pre>";
 	}
 
 	/*
@@ -97,8 +111,37 @@ class CP_Import {
 	 */
 	function ui_header() {
 		echo "<div class='wrap'>\n";
-		echo "<h2>".__('CP Import')."</h2>";
-		echo "<p><a href=\"tools.php?page=cp-import/cp-import.php&amp;step=1\">".__('Main')."</a>&nbsp;|&nbsp;<a href=\"tools.php?page=cp-import/cp-import.php&amp;step=options\">".__('Options')."</a></p>";
+		echo "<h2 style='padding-bottom: 0px;'>".__('CP Import')."</h2>";
+		echo "<p>";
+
+		if (is_numeric($this->step))
+			echo "<strong>";
+		else
+			echo "<a href=\"tools.php?page=cp-import/cp-import.php&amp;step=1\">";
+
+		echo __('Import');
+		
+		if (is_numeric($this->step))
+			echo "</strong>";
+		else
+			echo "</a>";
+
+		echo "&nbsp;|&nbsp;";
+		
+                if ($this->step == "options")
+			echo "<strong>";
+		else 
+			echo "<a href=\"tools.php?page=cp-import/cp-import.php&amp;step=options\">";
+	        
+		echo __('Options');
+		
+		if ($this->step == "options")
+			echo "</strong>";
+		else
+			echo "</a>";
+		
+		echo "</p>";
+							       
 	}
 
 	/*
@@ -384,7 +427,7 @@ class CP_Import {
 				wp_die('Your media folder was not uploaded correctly. '.
 				'Remember that you needed to do this manually. '.
 				'You need to upload the <b>contents</b> of the <b>paperXXXX</b> folder '.
-				'that CP gave you to <b>wp-content/cp-import</b>. If done correctly, the '.
+				'that CP gave you to <b>'.$this->media_dir_h.'</b>. If done correctly, the '.
 				'file structure should look similar to this:<br/><br/>'.$this->media_dir.'/audio<br/>'.
 				''.$this->media_dir.'/stills<br/>'.$this->media_dir.'/video<br/><br/>Once you\'ve '.
 				'uploaded the media folder, refresh this page to try again.');
@@ -644,6 +687,28 @@ class CP_Import {
 		return $date;
 
 	}
+	
+	/*
+	 * get_date_elements
+	 *
+	 * @param WOrdpress-formatted date
+	 *
+	 * @return array containing the year, month and day values from the parameter string.
+	 */
+	function get_date_elements( $date ) {
+		if ($this->DEBUG)
+			echo "<pre>get_gate_elements(".$date.")</pre><br />";
+			
+		$ret = array();
+		array_push($ret, substr($date,8,2));
+		array_push($ret, substr($date,5,2));
+		array_push($ret, substr($date,0,4));
+
+		if ($this->DEBUG)
+			echo "<pre>get_date_elements returning:".print_r($ret, true)."</pre>";
+	
+		return $ret;
+	}
 
 	/*
 	 * optimizeXLS
@@ -707,16 +772,9 @@ class CP_Import {
 	 *
 	 * The main event! This displays the steps, and processes the articles.
 	 */
-	function go($step) {
+	function go() {
 		
 		// determine the step we are one
-		if (empty($_GET['step']))
-			$this->step = 1;
-		else if (isset($step))
-                        $this->step = $step;
-                else
-		        $this->step = $_GET['step'];
-
 		switch ( $this->step ) {
 			case 'options':
 				$this->ui_options();
@@ -804,40 +862,63 @@ class CP_Import {
 							$wp_id = wp_insert_post($article);
 							//echo "<pre>".print_r($article,true)."</pre>";
 
-							if (get_option("cp_import_from") == 4) {
+							// set the new article's ID to that of CP
+							$query = $this->wpdb->prepare("UPDATE ".$this->wpdb->posts." SET ID = %d WHERE ID = %d", $article['cp_id'], $wp_id);
+							$this->wpdb->query($query);
 
-								// set the new article's ID to that of CP
-								$query = $this->wpdb->prepare("UPDATE ".$this->wpdb->posts." SET ID = %d WHERE ID = %d", $article['cp_id'], $wp_id);
-								$this->wpdb->query($query);
-								
-								// Update category for new ID
-								$query = $this->wpdb->prepare("UPDATE ".$this->wpdb->term_relationships." SET object_id = %d WHERE object_id = %d", $article['cp_id'], $wp_id);
-								$this->wpdb->query($query);
-								
-								// Update Post GUID to match CP URL structure.
-								// This has no effect if the user chose not to use CP URLS
-								$post_title = $this->wpdb->get_var($this->wpdb->prepare("SELECT post_name FROM ".$this->wpdb->posts." WHERE ID = %d", $article['cp_id']));
-								$post_title2 = explode("-", $post_title);
-								$post_title = "";
-								foreach ($post_title2 as $pt) {
-									$post_title .= ucfirst($pt).".";
-									if (strlen($post_title) > 80) {
-										$post_title = substr($post_title, 0, 80);
-										break;
-									}	
-								}
+							// Update category for new ID
+							$query = $this->wpdb->prepare("UPDATE ".$this->wpdb->term_relationships." SET object_id = %d WHERE object_id = %d", $article['cp_id'], $wp_id);
+							$this->wpdb->query($query);
 
-								if (substr($post_title, strlen($post_title)-1) == ".")
-									$post_title = substr($post_title, 0, strlen($post_title)-1);
-	
-								$query = $this->wpdb->prepare("UPDATE ".$this->wpdb->posts." SET guid = %s WHERE ID = %d", $post_title, $article['cp_id']);
-								echo $query;
-								$wp_id = $article['cp_id'];
+							// Update Post GUID to match CP URL structure.
+							// This has no effect if the user chose not to use CP URLS
+							$post_title = $this->wpdb->get_var($this->wpdb->prepare("SELECT post_name FROM ".$this->wpdb->posts." WHERE ID = %d", $article['cp_id']));
+							$post_title2 = explode("-", $post_title);
+							$post_title = "";
+							foreach ($post_title2 as $pt) {
+								$post_title .= ucfirst($pt).".";
+								if (strlen($post_title) > 80) {
+									$post_title = substr($post_title, 0, 80);
+									break;
+								}	
 							}
 
-echo "<pre>".print_r($this->wpdb,true)."</pre>";
+							if (substr($post_title, strlen($post_title)-1) == ".")
+								$post_title = substr($post_title, 0, strlen($post_title)-1);
+
+							switch (get_option('cp_import_from')) {
+								case 4:
+								default:
+									$url = get_option('home').$this->cp4url;
+									break;
+								case 5:
+									$url = get_option('home').$this->cp5url;
+									break;
+							}
+
+							$cats = get_the_category($article['cp_id']);
+							$date = $this->get_date_elements($article['post_date']);
 								
-								
+							// Replace permalink keywords
+							$url = str_replace("%post_id%", $article['cp_id'], $url);
+							$url = str_replace("%postname%", $post_title, $url);
+							$url = str_replace("%category%", $cats[0]->cat_name, $url);
+							$url = str_replace("%year%", $date[2], $url);
+							$url = str_replace("%monthnum%", $date[1], $url);
+							$url = str_replace("%day%", $date[0], $url);
+
+							
+							$query = $this->wpdb->prepare("UPDATE ".$this->wpdb->posts." SET guid = %s WHERE ID = %d", $url, $article['cp_id']);
+							echo $query;
+							$wp_id = $article['cp_id'];
+
+							unset($post_title);
+							unset($post_title2);
+							unset($url);
+							unset($query);
+							unset($cats);
+							unset($date);
+
 							// attach the paper's CP ID as a custom field
 							add_post_meta($wp_id, 'CP ID', $article['cp_id']);
 							
@@ -876,7 +957,7 @@ echo "<pre>".print_r($this->wpdb,true)."</pre>";
 							
 									// make sure that the file refereneced exists
 									if (!file_exists(WP_CONTENT_DIR."/cp-import".$img['file']))
-										echo __('File not found: ')."<b>wp-content/cp-import".$img['file']."</b><br />";
+										echo __('File not found: ')."<b>".$this->media_dir_h.$img['file']."</b><br />";
 									else {
 										// determine paths where this media will be saved at
 										$rel_path = date("Y") . "/" . date("m") . "/" . basename ($img['file']);	
@@ -887,7 +968,7 @@ echo "<pre>".print_r($this->wpdb,true)."</pre>";
 										$attach['guid'] = get_option('siteurl') ."/". $dest_path;
 										
 										// copy the media from wp-content/cp-import to the Wordpress media repository
-										@copy (	WP_CONTENT_DIR."/cp-import".$img['file'],
+										@copy (	$this->media_dir.$img['file'],
 											ABSPATH . $dest_path );
 										// insert the media into the WP database
 										$attach_id = wp_insert_attachment($attach, false, $wp_id);
