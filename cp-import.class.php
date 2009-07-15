@@ -66,10 +66,8 @@ class CP_Import {
 	 */
 	var $cp5link;
 
-
-
 	var $wpdb;
-	var $DEBUG = 1;
+	var $DEBUG = 0;
 	
 
 	/*
@@ -90,13 +88,10 @@ class CP_Import {
 		
 		$this->media_dir = WP_CONTENT_DIR."/cp-import/";
 		$this->media_dir_h = basename(dirname($this->media_dir)) . "/" . basename($this->media_dir) . "/";
-		$this->media_file = $_GET['media'];
+		$this->media_file = ($_GET['media']) ? $_GET['media'] : get_option('cp_import_media_file');
 		$this->archive_file = $_GET['archive'];
 		
 		$this->wpdb = $wpdb;
-
-		$this->cp4url = $this->cp4link;
-		$this->cp5url = $this->cp5link;
 
 		if ($this->DEBUG)
 			echo "<pre>".print_r($this, true)."</pre>";
@@ -351,6 +346,9 @@ class CP_Import {
 		$file = wp_import_handle_upload();
 
 		if ( isset($file['file']) || isset($_GET['archive']) ) {
+
+			if (!isset($this->archive_file))
+				$this->archive_file = $file['file'];
 				
 			echo "<p>".__('Your archive file has been successfully uploaded!')."</p>";
 
@@ -362,8 +360,8 @@ class CP_Import {
 				// User has already uploaded a media file
 				echo "<p>".__('CP Import has detected that you already uploaded a media file:')."</p>";
 				echo "<pre>".get_option("cp_import_media_file")."</pre>";
-				echo "<p><a href=\"tools.php?page=cp-import/cp-import.php&amp;step=3&amp;archive=".$file['file']."\">".__('Yes, I want to use this file')."</a></p>";
-				echo "<p><a href=\"tools.php?page=cp-import/cp-import.php&amp;step=2&amp;newfile=1&amp;archive=".$file['file']."\">".__('No, I want to use a different file')."</a></p>";
+				echo "<p><a href=\"tools.php?page=cp-import/cp-import.php&amp;step=3&amp;archive=".$this->archive_file."\">".__('Yes, I want to use this file')."</a></p>";
+				echo "<p><a href=\"tools.php?page=cp-import/cp-import.php&amp;step=2&amp;newfile=1&amp;archive=".$this->archive_file."\">".__('No, I want to use a different file')."</a></p>";
 			}
 			else {
 				echo "<p>".__('Now, we need to upload your media file and folder.')."</p>";
@@ -384,7 +382,7 @@ class CP_Import {
 	/*
 	 * ui_step3
 	 *
-	 * Grabs te uploaded media file, and checks to make sure that all required files and folders are present.
+	 * Grabs the uploaded media file, and checks to make sure that all required files and folders are present.
 	 *
 	 * @since 1.0
 	 */
@@ -394,10 +392,11 @@ class CP_Import {
 
 		$file = wp_import_handle_upload();
 
-		if (isset($file['file'])) {
+		if (isset($file['file']) || isset($this->media_file)) {
 
-			$this->archive_file = $_GET['archive'];
-			$this->media_file = $file['file'];
+			if (!isset($this->media_file))
+				$this->media_file = $file['file'];
+			
 			update_option("cp_import_media_file", $this->media_file);
 			echo "<p>".__('Media file successfully uploaded!')."</p>";
 					
@@ -406,13 +405,13 @@ class CP_Import {
 			echo "<p>".__('Checking for required files and folders...')."</p>";
 			echo "<ul><li>".__('<b>Archive file:</b> ');
 			if (file_exists($this->archive_file))
-				echo __(' okay!')."</li>";
+				echo __(' okay!')."<pre>          ".basename($this->archive_file)."</pre></li>";
 			else
 				wp_die('Your archive file seems to have disappeared...<br/><br/>Make sure someone didn\'t accidentally delete it or that you didn\'t modify the URL that took you to this page.');
 			
 			echo "<li>".__('<b>Media file:</b> ');
 			if (file_exists($this->media_file))
-				echo __(' okay!')."</li>";
+				echo __(' okay!')."<pre>          ".basename($this->media_file)."</pre></li>";
 			else
 				wp_die('Your media file seems to have disappeared...');
 
@@ -422,7 +421,7 @@ class CP_Import {
 				is_dir($this->media_dir."/audio") &&
 				is_dir($this->media_dir."/video")
 				)
-				echo __(' okay!')."</li></ul>";
+				echo __(' okay!')."<pre>          ".$this->media_dir_h."</pre></li></ul>";
 			else {
 				wp_die('Your media folder was not uploaded correctly. '.
 				'Remember that you needed to do this manually. '.
@@ -514,7 +513,7 @@ class CP_Import {
 	 *
 	 * The function adheres to the "cp_import_user" option
 	 *
-	 * If set to "accounts", it will ueries the Wordpress database to see if a user with the name of the article's author exists.
+	 * If set to "accounts", it queries the Wordpress database to see if a user with the name of the article's author exists.
 	 * If it does not exist, then create a new user with that name and a random password. If so, grab the existing user_id.
 	 *
 	 * If set to "fields", it will attach the author's name as specified in the archive file to the post as a custom field. The author
@@ -889,10 +888,10 @@ class CP_Import {
 							switch (get_option('cp_import_from')) {
 								case 4:
 								default:
-									$url = get_option('home').$this->cp4url;
+									$url = get_option('home').$this->cp4link;
 									break;
 								case 5:
-									$url = get_option('home').$this->cp5url;
+									$url = get_option('home').$this->cp5link;
 									break;
 							}
 
@@ -909,7 +908,7 @@ class CP_Import {
 
 							
 							$query = $this->wpdb->prepare("UPDATE ".$this->wpdb->posts." SET guid = %s WHERE ID = %d", $url, $article['cp_id']);
-							echo $query;
+							$this->wpdb->query($query);
 							$wp_id = $article['cp_id'];
 
 							unset($post_title);
@@ -930,9 +929,7 @@ class CP_Import {
 							if ( get_option("cp_import_user") == "fields")
 								add_post_meta($wp_id, 'author', $article['post_author_name']);
 							
-							die();
-	
-							//echo "<pre>".print_r($a[$article['cp_id']],true)."</pre>";
+							echo "<pre>".print_r($a[$article['cp_id']],true)."</pre>";
 							
 							// if the media XLS has media for this post, find it
 							if (isset($a[$article['cp_id']])) {
