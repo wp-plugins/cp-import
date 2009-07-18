@@ -19,6 +19,13 @@
 #
 
 #
+# The following a simple "flags" that you can set to tweak the behavior of 
+# CP Import when preparing your archive file for processing by Wordpress.
+#
+# 1 = Yes, 0 = No.
+# 
+
+#
 # Would you like this script to operate in read-only mode? This will result in
 # nothing being saved to your computer.
 #
