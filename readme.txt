@@ -1,10 +1,10 @@
 === CP Import ===
-Contributors: jluetke
+Contributors: John Luetke
 Donate link: http://johnluetke.net
 Tags: import, college, publisher
 Requires at least: 2.7.1
-Tested up to: 2.7.1
-Stable tag: 1.0
+Tested up to: 2.8.1
+Stable tag: 1.1
 
 Import your College Publisher archives into Wordpress
 
@@ -28,7 +28,7 @@ This plugin currently only supports export files from CP 4. It is untested with 
 
 = Did College Publisher write this plugin? =
 
-No. This plugin was written by John Luetke (johnl1479) to aid in the Marquette Tribune's move from College Publisher to Wordpress. Niether the College Media Network nor MTV Netowrks support or endorse this plugin.
+No. This plugin was written by John Luetke (johnl1479) to aid in the Marquette Tribune's move from College Publisher to Wordpress. Niether the College Media Network nor MTV Networks support or endorse this plugin.
 
 = Is this compatible with Wordpress MU? =
 
@@ -37,6 +37,8 @@ Yes. This plugin was developed using Wordpress MU, but does not use any MU-speci
 = What versions of College Publisher will this work with? =
 
 This plugin was written using CP 4 export files. It has not been tested with CP 5 export files. If you have CP 5 export files and would like to send them to me, I will try to make this plugin compatible.
+
+Version 1.1 introduces experimental support for CP5.
 
 = Will this import my paper's Custom Pages? =
 
@@ -49,6 +51,8 @@ Not as of now, however, if demand asks, a future version will.
 == Acknowledgements ==
 
 I'd like to thank Brian Schlansky for documentating the Miami Hurricane's move from CP to Wordpress. I'd have been lost without it.
+
+Also, thanks to Daniel Bachhuber of CoPress for the publicity and feature requests.
 
 Lastly, Thank Wordpress, for developing such a customizable publishing platform.
 

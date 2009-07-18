@@ -60,13 +60,19 @@ class CP_Import {
 	 */
 	var $cp4link;
 
-
 	/**
 	 * @var string $cp5link
 	 */
 	var $cp5link;
-
+	
+	/**
+	 * @var Object $wpdb
+	 */
 	var $wpdb;
+	
+	/**
+	 * @var boolean DEBUG
+	 */
 	var $DEBUG = 0;
 	
 
@@ -266,6 +272,15 @@ class CP_Import {
 
 	}
 
+	/**
+	 * ui_userlist
+	 *
+	 * Echos a drop-down list of all the user accounts on this instance
+	 *
+	 * @return
+	 *
+	 * @since 1.1
+	 */
 	function ui_userlist() {
 		global $wpdb;
 	
@@ -690,9 +705,11 @@ class CP_Import {
 	/*
 	 * get_date_elements
 	 *
-	 * @param WOrdpress-formatted date
+	 * @param oOrdpress-formatted date
 	 *
 	 * @return array containing the year, month and day values from the parameter string.
+	 *
+	 * @since 1.1
 	 */
 	function get_date_elements( $date ) {
 		if ($this->DEBUG)
@@ -712,12 +729,14 @@ class CP_Import {
 	/*
 	 * optimizeXLS
 	 *
-	 * Optimizes and XLS Reader object by dropping unnessary columns based on the $type specified
+	 * Optimizes an XLS Reader object by dropping unnessary columns based on the $type specified
 	 *
 	 * @param string $type enum { 'attachment' }
 	 * @param XLS Reader Object $xls
 	 *
-	 * @return XLS Reader Object 
+	 * @return array 
+	 *
+	 * #since 1.0
 	 */
 	function optimizeXLS( $type, $xls) {
 		unset($xls->sst);
@@ -761,6 +780,8 @@ class CP_Import {
 	 * @param string $file file whose mime type is to be determined
 	 *
 	 * @return string
+	 *
+	 * @since 1.0
 	 */
 	function get_mime($file) {
 		return trim(exec('file -b --mime '.escapeshellarg($file)));
@@ -929,7 +950,7 @@ class CP_Import {
 							if ( get_option("cp_import_user") == "fields")
 								add_post_meta($wp_id, 'author', $article['post_author_name']);
 							
-							echo "<pre>".print_r($a[$article['cp_id']],true)."</pre>";
+							//echo "<pre>".print_r($a[$article['cp_id']],true)."</pre>";
 							
 							// if the media XLS has media for this post, find it
 							if (isset($a[$article['cp_id']])) {

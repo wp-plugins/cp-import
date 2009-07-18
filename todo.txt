@@ -2,5 +2,3 @@ CP Import To-Do list:
 
 - Eliminate the need for Excel.
 - Eliminate need to re-upload media file should it already exist
-- Set custom field for each post that contains CP Article ID.
-
