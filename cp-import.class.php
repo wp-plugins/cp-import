@@ -1016,7 +1016,6 @@ class CP_Import {
 							$count++;
 						} // end non-numeric
 				
-					}
 				} // end while
 
 				// Undo ini changes
