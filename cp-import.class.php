@@ -64,6 +64,16 @@ class CP_Import {
 	 * @var string $cp5link
 	 */
 	var $cp5link;
+
+	/**
+	 * @var integer paper_id
+	 */
+	var $paper_id;
+
+	/**
+	 * @var integer import_from
+	 */
+	var $import_from;
 	
 	/**
 	 * @var Object $wpdb
@@ -87,9 +97,12 @@ class CP_Import {
 		global $wpdb;
 		
 		$this->step = (isset($_GET['step'])) ? $_GET['step'] : 1;
+
+		$this->paper_id = get_option('cp_import_paper_id');
+		$this->import_from = get_ovxvc;ption('cp_import_from');
 		
 		$this->date_format = "Y-m-d H:i:s";
-		$this->cp4link = "/media/storage/paper".get_option('cp_import_paper_id')."/news/%year%/%monthnum%/%day%/%category%/%postname%-%post_id%.shtml";
+		$this->cp4link = "/media/storage/paper".$this->paper_id."/news/%year%/%monthnum%/%day%/%category%/%postname%-%post_id%.shtml";
 		$this->cp5link = "/%category%/%postname%-1.%post_id%";
 		
 		$this->media_dir = WP_CONTENT_DIR."/cp-import/";
@@ -812,147 +825,143 @@ class CP_Import {
 			case 4:	
 				// Here is where the action REALLY happens
 				//
-				// Create 2 XLS Readers, one for the article table and one for the media table
-				$r = $this->newXLSReader();
-				$r->read($_GET['archive']);
-				
-				$a = $this->newXLSReader();
-				$a->read($_GET['media']);
-
-				// optimize the media XLS
-				$a = $this->optimizeXLS('attachment', $a);
+				// Get a handle for the CSV files
+				$archive_hndl = fopen($this->archive_file);
+				$media_hndl = fopen($this->media_file);
 
 				$this->ui_header();
+
 				// counter for article's imported
 				$count = 0;
+
+				// Safety setting for different line endings.                                      
+				$auto_detect_line_endings = ini_get('auto_detect_line_endings');
+				ini_set('auto_detect_line_endings',TRUE);
 				
-				// we need to loop through the sheets contained in the article XLS file.
-				//
-				// it is preferred that each file only have one sheet. this has not been tested with multiple
-				// sheet files
-				foreach ($r->sheets as $k=>$data) {
-
-					// loops through the rows, each of which is an individual article
-					foreach($data['cells'] as $row) {
-	
-						// Sets up an article object based on Wordpress specifications
-						$article = array();
+				// Loop through each of the articles.
+				while (($row = fgetcsv($archive_hndl, 16384)) !== FALSE) {
 						
-						$article['cp_id']		= $row[1]; // used for media association and as a custom field to each post
-						$article['post_title']		= $row[5];
-						$article['post_sub_title']	= $row[6];
-						$article['post_content']	= $row[8];
-						$article['post_author']		= $row[9];
-						$article['post_category']	= array($row[4]);
-						$article['post_date']		= $row[3];
-						$article['post_excerpt']	= $row[7];
+					$article['cp_id']			= $row[1];
+					$article['post_title']		= $row[5];
+					$article['post_sub_title']	= $row[6];
+					$article['post_content']	= $row[8];
+					$article['post_author']		= $row[9];
+					$article['post_category']	= array($row[4]);
+					$article['post_date']		= $row[3];
+					$article['post_excerpt']	= $row[7];
 						
-						// default values
-						$article['post_type']		= "post";
-						$article['post_status']         = "publish";
-						$article['comment_status']	= "closed";
+					// default values
+					$article['post_type']		= "post";
+					$article['post_status']         = "publish";
+					$article['comment_status']	= "closed";
 			
-						// transform data into Wordpress formats
-						$article = $this->process_date(&$article);
-						$article = $this->process_author(&$article);
+					// transform data into Wordpress formats
+					$article = $this->process_date(&$article);
+					$article = $this->process_author(&$article);
 			
-						// If the ID is not numeric, skip it
-						if (is_numeric($article['cp_id'])) {
+					// If the ID is not numeric, skip it
+					if (is_numeric($article['cp_id'])) {
 			
-							// begin output
-							echo __('Importing article: <i>').$article['post_title'].__('...<br />');
+						// begin output
+						echo __('Importing article: <i>').$article['post_title'].__('</i>...<br />');
 							
-							// get the ID of this article's author
-							$article = $this->get_user_id(&$article);
+						// get the ID of this article's author
+						$article = $this->get_user_id(&$article);
 							
-							// get / create the category that this article comes from
-							$article = $this->get_category_id(&$article);
-							echo "&nbsp;&nbsp;&nbsp;".__('Searching for media attachments...');
+						// get / create the category that this article comes from
+						$article = $this->get_category_id(&$article);
+
+						// Append the [gallery] tag to the end of each post. If there is no 
+						// media associated with the post, this will have no effect.
+						$article['post_content'] .= "<p>[gallery]</p>";
+
+						// search for media associated with this article. if found, simply append the [gallery]
+						// tag to the article's content
+						if (isset($a[$article['cp_id']])) {
+							echo sizeof($a[$article['cp_id']]).__(' found!')."<br />";
+							$article['post_content'] .= "<p>[gallery]</p>";
+						}
+						else
+							echo __('none found')."<br/>";
 							
-							// search for media associated with this article. if found, simply append the [gallery]
-							// tag to the article's content
-							if (isset($a[$article['cp_id']])) {
-								echo sizeof($a[$article['cp_id']]).__(' found!')."<br />";
-								$article['post_content'] .= "<p>[gallery]</p>";
-							}
-							else
-								echo __('none found')."<br/>";
+						// insert the article into the Wordpress database, and get it's new ID
+						$wp_id = wp_insert_post($article);
+						//echo "<pre>".print_r($article,true)."</pre>";
+
+						// set the new article's ID to that of CP
+						$query = $this->wpdb->prepare("UPDATE ".$this->wpdb->posts." SET ID = %d WHERE ID = %d", $article['cp_id'], $wp_id);
+						$this->wpdb->query($query);
+
+						// Update category for new ID
+						$query = $this->wpdb->prepare("UPDATE ".$this->wpdb->term_relationships." SET object_id = %d WHERE object_id = %d", $article['cp_id'], $wp_id);
+						$this->wpdb->query($query);
+
+						// Update Post GUID to match CP URL structure.
+						// This has no effect if the user chose not to use CP URLS
+						//
+						// This block of code will also replace the value of the $wp_id with the CP ID.
+						$post_title = $this->wpdb->get_var($this->wpdb->prepare("SELECT post_name FROM ".$this->wpdb->posts." WHERE ID = %d", $article['cp_id']));
+						$post_title2 = explode("-", $post_title);
+						$post_title = "";
+						foreach ($post_title2 as $pt) {
+							$post_title .= ucfirst($pt).".";
+							if (strlen($post_title) > 80) {
+								$post_title = substr($post_title, 0, 80);
+								break;
+							}	
+						}
+
+						if (substr($post_title, strlen($post_title)-1) == ".")
+							$post_title = substr($post_title, 0, strlen($post_title)-1);
+
+						switch ($this->import_from) {
+							case 4:
+							default:
+								$url = get_option('home').$this->cp4link;
+								break;
+							case 5:
+								$url = get_option('home').$this->cp5link;
+								break;
+						}
+
+						$cats = get_the_category($article['cp_id']);
+						$date = $this->get_date_elements($article['post_date']);
 							
-							// insert the article into the Wordpress database, and get it's new ID
-							$wp_id = wp_insert_post($article);
-							//echo "<pre>".print_r($article,true)."</pre>";
-
-							// set the new article's ID to that of CP
-							$query = $this->wpdb->prepare("UPDATE ".$this->wpdb->posts." SET ID = %d WHERE ID = %d", $article['cp_id'], $wp_id);
-							$this->wpdb->query($query);
-
-							// Update category for new ID
-							$query = $this->wpdb->prepare("UPDATE ".$this->wpdb->term_relationships." SET object_id = %d WHERE object_id = %d", $article['cp_id'], $wp_id);
-							$this->wpdb->query($query);
-
-							// Update Post GUID to match CP URL structure.
-							// This has no effect if the user chose not to use CP URLS
-							$post_title = $this->wpdb->get_var($this->wpdb->prepare("SELECT post_name FROM ".$this->wpdb->posts." WHERE ID = %d", $article['cp_id']));
-							$post_title2 = explode("-", $post_title);
-							$post_title = "";
-							foreach ($post_title2 as $pt) {
-								$post_title .= ucfirst($pt).".";
-								if (strlen($post_title) > 80) {
-									$post_title = substr($post_title, 0, 80);
-									break;
-								}	
-							}
-
-							if (substr($post_title, strlen($post_title)-1) == ".")
-								$post_title = substr($post_title, 0, strlen($post_title)-1);
-
-							switch (get_option('cp_import_from')) {
-								case 4:
-								default:
-									$url = get_option('home').$this->cp4link;
-									break;
-								case 5:
-									$url = get_option('home').$this->cp5link;
-									break;
-							}
-
-							$cats = get_the_category($article['cp_id']);
-							$date = $this->get_date_elements($article['post_date']);
-								
-							// Replace permalink keywords
-							$url = str_replace("%post_id%", $article['cp_id'], $url);
-							$url = str_replace("%postname%", $post_title, $url);
-							$url = str_replace("%category%", $cats[0]->cat_name, $url);
-							$url = str_replace("%year%", $date[2], $url);
-							$url = str_replace("%monthnum%", $date[1], $url);
-							$url = str_replace("%day%", $date[0], $url);
-
+						// Replace permalink keywords
+						$url = str_replace("%post_id%", $article['cp_id'], $url);
+						$url = str_replace("%postname%", $post_title, $url);
+						$url = str_replace("%category%", $cats[0]->cat_name, $url);
+						$url = str_replace("%year%", $date[2], $url);
+						$url = str_replace("%monthnum%", $date[1], $url);
+						$url = str_replace("%day%", $date[0], $url);
 							
-							$query = $this->wpdb->prepare("UPDATE ".$this->wpdb->posts." SET guid = %s WHERE ID = %d", $url, $article['cp_id']);
-							$this->wpdb->query($query);
-							$wp_id = $article['cp_id'];
+						$query = $this->wpdb->prepare("UPDATE ".$this->wpdb->posts." SET guid = %s WHERE ID = %d", $url, $article['cp_id']);
+						$this->wpdb->query($query);
+						$wp_id = $article['cp_id'];
 
-							unset($post_title);
-							unset($post_title2);
-							unset($url);
-							unset($query);
-							unset($cats);
-							unset($date);
+						unset($post_title);
+						unset($post_title2);
+						unset($url);
+						unset($query);
+						unset($cats);
+						unset($date);
 
-							// attach the paper's CP ID as a custom field
-							add_post_meta($wp_id, 'CP ID', $article['cp_id']);
+						// End GUID modifications
+
+						// attach the paper's CP ID as a custom field
+						add_post_meta($wp_id, 'CP ID', $article['cp_id']);
 							
-							// if this article had a subheadline, add it as a cumton field to the new post
-							if ( isset($article['post_sub_title']) )
-								add_post_meta($wp_id, 'subheadline', $article['post_sub_title']);
+						// if this article had a subheadline, add it as a cumton field to the new post
+						if ( isset($article['post_sub_title']) )
+							add_post_meta($wp_id, 'subheadline', $article['post_sub_title']);
 							
-							// if we are to attach author name as custom fields, do so
-							if ( get_option("cp_import_user") == "fields")
-								add_post_meta($wp_id, 'author', $article['post_author_name']);
+						// if we are to attach author name as custom fields, do so
+						if ( get_option("cp_import_user") == "fields")
+							add_post_meta($wp_id, 'author', $article['post_author_name']);
 							
-							//echo "<pre>".print_r($a[$article['cp_id']],true)."</pre>";
+						//echo "<pre>".print_r($a[$article['cp_id']],true)."</pre>";
 							
-							// if the media XLS has media for this post, find it
+						/* if the media XLS has media for this post, find it
 							if (isset($a[$article['cp_id']])) {
 							
 								// there could be muliple pieces of media per article, so loop
@@ -999,8 +1008,8 @@ class CP_Import {
 										// we're done!
 										echo __('done!')."<br />";
 									}
-								}
-							}
+								} // end foreach
+							} // end if media. */
 						
 							// congratualtions!
 							echo "&nbsp;&nbsp;&nbsp;".__('done!')."</i><br/>";
@@ -1008,7 +1017,11 @@ class CP_Import {
 						} // end non-numeric
 				
 					}
-				}
+				} // end while
+
+				// Undo ini changes
+				ini_set('auto_detect_line_endings',$auto_detect_line_endings);
+
 					
 				echo "<p>".$count.__(' articles were successfully imported!')."</p>";
 				echo "<p>".__('Congratulations! Your CP archive has been successfully imported to Wordpress! Have fun!')."</p>";
