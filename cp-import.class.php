@@ -14,11 +14,10 @@
  * @filesource
  */
 
-require("excel-reader.php");
-
 /**
- * Creates a new CP_Import object. This class contains all the functions for parsing and extracting data from a College Publisher archive file
- * in .xls format.
+ * Creates a new CP_Import object. This class contains all the functions for
+ * parsing and extracting data from a College Publisher archive file formatted 
+ * by the accompanying Perl script.
  *
  * @author John Luetke
  */
@@ -74,6 +73,11 @@ class CP_Import {
 	 * @var integer import_from
 	 */
 	var $import_from;
+
+	/**
+	 * @var integer user_type
+	 */
+	var $user_type;
 	
 	/**
 	 * @var Object $wpdb
@@ -98,16 +102,24 @@ class CP_Import {
 		
 		$this->step = (isset($_GET['step'])) ? $_GET['step'] : 1;
 
-		$this->paper_id = get_option('cp_import_paper_id');
-		$this->import_from = get_option('cp_import_from');
+		$this->paper_id		= get_option('cp_import_paper_id');
+		$this->import_from 	= get_option('cp_import_from');
+		$this->user_type 	= get_option('cp_import_user');
 		
-		$this->date_format = "Y-m-d H:i:s";
-		$this->cp4link = "/media/storage/paper".$this->paper_id."/news/%year%/%monthnum%/%day%/%category%/%postname%-%post_id%.shtml";
-		$this->cp5link = "/%category%/%postname%-1.%post_id%";
+		$this->date_format 	= "Y-m-d H:i:s";
+
+		$this->cp4link		= "/media/storage/paper" . $this->paper_id . 
+							  "/news/%year%/%monthnum%/%day%/%category%" . 
+							  "/%postname%-%post_id%.shtml";
+		$this->cp5link		= "/%category%/%postname%-1.%post_id%";
 		
-		$this->media_dir = WP_CONTENT_DIR."/cp-import/";
-		$this->media_dir_h = basename(dirname($this->media_dir)) . "/" . basename($this->media_dir) . "/";
-		$this->media_file = ($_GET['media']) ? $_GET['media'] : get_option('cp_import_media_file');
+		$this->media_dir	= WP_CONTENT_DIR."/cp-import/";
+		$this->media_dir_h	= basename(dirname($this->media_dir)) . 
+							  "/" . basename($this->media_dir) . "/";
+		$this->media_file	= ($_GET['media']) ? 
+								$_GET['media'] :
+								get_option('cp_import_media_file');
+
 		$this->archive_file = $_GET['archive'];
 		
 		$this->wpdb = $wpdb;
@@ -228,9 +240,9 @@ class CP_Import {
 				<tr>
 					<td valign="top" >Import Authors as:</td>
 					<td valign="top" >
-						<input type="radio" name="create_users" value="accounts" group="create_users" <?php echo ((get_option("cp_import_user") == "accounts") ? "checked='checked' " : ""); ?>/>&nbsp;Wordpress Accounts<br />
-						<input type="radio" name="create_users" value="fields" group="create_users" <?php echo ((get_option("cp_import_user") == "fields") ? "checked='checked' " : ""); ?>/>&nbsp;Custom Field<br />
-						<input type="radio" name="create_users" value="none" group="create_users" <?php echo ((get_option("cp_import_user") == "none") ? "checked='checked' " : ""); ?>/>&nbsp;None
+						<input type="radio" name="create_users" value="accounts" group="create_users" <?php echo (($this->user_type == "accounts") ? "checked='checked' " : ""); ?>/>&nbsp;Wordpress Accounts<br />
+						<input type="radio" name="create_users" value="fields" group="create_users" <?php echo (($this->user_type == "fields") ? "checked='checked' " : ""); ?>/>&nbsp;Custom Field<br />
+						<input type="radio" name="create_users" value="none" group="create_users" <?php echo (($this->user_type == "none") ? "checked='checked' " : ""); ?>/>&nbsp;None
 					</td>
 					<td valign="top" >
 						CP Import can either create a Wordpress User account for each author that it finds, or add that information to each post as a custom field.<br /><br />More options are below if you choose "Wordpress Account". If you choose "Custom Field", author data will be imported as-is from you Archive file.
@@ -250,9 +262,9 @@ class CP_Import {
 				<tr>
 					<td valign="top" >Username Format:</td>
 					<td valign="top" >
-						<input type="text" name="username_before" size="15" value="<?php echo get_option('cp_import_username_before');?>"/>
+						<input type="text" name="username_before" size="15" value="<?php echo $this->username_prefix;?>"/>
 						%username%
-						<input type="text" name="username_after" size="15" value="<?php echo get_option('cp_import_username_after');?>"/>
+						<input type="text" name="username_after" size="15" value="<?php echo $this->username_suffix;?>"/>
 					</td>
 					<td valign="top" >
 						If importing authors as Wordpress accounts, how should thier username be formatted? <strong>%username%</strong> is automatically created by CP Import as <pre>firstname.lastname</pre>
@@ -263,7 +275,7 @@ class CP_Import {
 				<tr>
 					<td valign="top" >CP URL Structure?</td>
 					<td valign="top" >
-						<input type="checkbox" name="url_structure" value="1" />&nbsp;Enabled&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;CP Paper ID: <input type="text" size="5" maxlength="4" name="paper_id" value="<?php echo get_option("cp_import_paper_id");?>" />
+						<input type="checkbox" name="url_structure" value="1" />&nbsp;Enabled&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;CP Paper ID: <input type="text" size="5" maxlength="4" name="paper_id" value="<?php echo $this->paper_id;?>" />
 					</td>
 					<td valign="top" >
 						Would you like CP Import to set your permalink structure to mimic that of College Publisher? (Experimental).<br /><br />You can come back to change this later without having to re-import your articles.
@@ -304,7 +316,7 @@ class CP_Import {
 		foreach ($users as $user) {
 			
 			$user = get_userdata( $user );
-			$xhtml .= "<option value='".$user->ID."' ".((get_option("cp_import_default_user") == $user->ID) ? "selected='selected'" : "")."/>".(($user->first_name) ? $user->display_name : $user->user_login);
+			$xhtml .= "<option value='".$user->ID."' ".(($this->default_user") == $user->ID) ? "selected='selected'" : "")."/>".(($user->first_name) ? $user->display_name : $user->user_login);
 		}
 
 		$xhtml .= "</select>";
@@ -384,10 +396,10 @@ class CP_Import {
 				update_option("cp_import_media_file", "");
 			}
 
-			if (strlen(get_option("cp_import_media_file"))) {
+			if (strlen($this->media_file)) {
 				// User has already uploaded a media file
 				echo "<p>".__('CP Import has detected that you already uploaded a media file:')."</p>";
-				echo "<pre>".get_option("cp_import_media_file")."</pre>";
+				echo "<pre>".$this->media_file."</pre>";
 				echo "<p><a href=\"tools.php?page=cp-import/cp-import.php&amp;step=3&amp;archive=".$this->archive_file."\">".__('Yes, I want to use this file')."</a></p>";
 				echo "<p><a href=\"tools.php?page=cp-import/cp-import.php&amp;step=2&amp;newfile=1&amp;archive=".$this->archive_file."\">".__('No, I want to use a different file')."</a></p>";
 			}
@@ -480,20 +492,6 @@ class CP_Import {
 	}
 
 	/*
-	 * newXLSReader
-	 *
-	 * Creates an Excel reader object.
-	 *
-	 * @since 1.0
-	 */
-	function newXLSReader () {
-		$reader=new Spreadsheet_Excel_Reader();
-		$reader->setUTFEncoder('iconv');
-		$reader->setOutputEncoding('UTF-8');
-		return $reader;
-	}
-
-	/*
 	 * process_date
 	 *
 	 * Formats the date according to $this->date_format
@@ -563,37 +561,39 @@ class CP_Import {
 	function get_user_id ( $article ) {
 
 		$account = $this->username_prefix . $article['post_author'] . $this->username_suffix;
-	
-		$exists = username_exists($article['post_author']);
-		echo "&nbsp;&nbsp;&nbsp;".__('Searching for account "'.$account.'"... ');
+
+		$exists = username_exists($account);
+		echo "&nbsp;&nbsp;&nbsp;".__('Searching for account:') . $account . "...";
 		$name = $article['post_author'];
 
-		switch (get_option("cp_import_user")) {
+
+		switch ($this->user_type) {
 
 			case "accounts":
 			default:
+
 				if ($exists) {
-					$article['post_author'] = $exists;
 					echo __('found!')."<br/>";
-					$this->set_user_info($exists, $article['post_author_name']);
  				}
 				else {
-		                        $id = wp_create_user ($article['post_author'], md5(time()));
-				        $article['post_author'] = $id;
-				        echo __('new acount created!')."<br />";
-					$this->set_user_info($id, $name);
+					$exists = wp_create_user ($account, md5(time()));
+				    echo __('new acount created!')."<br />";
 				}
+				$article['post_author'] = $exists;
+				$this->set_user_info($id, $name);
+
 				break;
 
 			case "fields":
-				if (strlen(get_option("cp_import_default_user")) > 0) {
-					$article['post_author'] = get_option("cp_import_default_user");
+				if ($this->default_user > 0) {
+					$article['post_author'] = $this->default_user;
 				}
 				else {
 					$article['post_author'] = 1;
 				}
 				echo __('found!')."<br/>";
 				break;
+
 			case "none":
 				if ($exists) {
 					$article['post_author'] = $exists;
@@ -601,8 +601,8 @@ class CP_Import {
 					$this->set_user_info($exists, $article['post_author_name']);
 				}
 				else {
-					if (strlen(get_option("cp_import_default_user")) > 0) {
-				        	$article['post_author'] = get_option("cp_import_default_user");
+					if ($this->default_user > 0) {
+				        	$article['post_author'] = $this->default_user;
 					}
 					else {
 					        $article['post_author'] = 1;
@@ -743,51 +743,6 @@ class CP_Import {
 	}
 
 	/*
-	 * optimizeXLS
-	 *
-	 * Optimizes an XLS Reader object by dropping unnessary columns based on the $type specified
-	 *
-	 * @param string $type enum { 'attachment' }
-	 * @param XLS Reader Object $xls
-	 *
-	 * @return array 
-	 *
-	 * #since 1.0
-	 */
-	function optimizeXLS( $type, $xls) {
-		unset($xls->sst);
-		unset($xls->data);
-		unset($xls->_ole);
-		unset($xls->formatRecords);
-		unset($xls->boundsheets);
-
-		switch ( $type ) {
-			case "attachment":
-
-				$xls->new = array();
-
-				foreach ($xls->sheets as $s=>$data) {
-					foreach ($data['cells'] as $row) {
-										
-						$t['file'] = $row[2];
-						$t['caption'] = $row[3];
-						$t['credit'] = $row[4];
-
-						$xls->new[$row[1]][] = $t;
-					}
-				}
-
-				$xls = $xls->new;
-
-				break;
-			default:
-				break;
-		}
-
-		return $xls;
-	}
-
-	/*
 	 * get_mime
 	 *
 	 * Gets the mime type of the specified file by executing a shell command.
@@ -844,9 +799,7 @@ class CP_Import {
 				// Loop through each of the articles.
 				while (($row = fgetcsv($archive_hndl, 16384)) !== FALSE) {
 						
-					echo "<pre>".print_r($row, true)."</pre>";
-
-					$article['cp_id']		= $row[0];
+					$article['cp_id']			= $row[0];
 					$article['post_title']		= $row[4];
 					$article['post_sub_title']	= $row[5];
 					$article['post_content']	= $row[7];
@@ -857,14 +810,12 @@ class CP_Import {
 						
 					// default values
 					$article['post_type']		= "post";
-					$article['post_status']         = "publish";
+					$article['post_status']     = "publish";
 					$article['comment_status']	= "closed";
 			
 					// transform data into Wordpress formats
 					$article = $this->process_date(&$article);
 					$article = $this->process_author(&$article);
-					
-					echo "<pre>".print_r($article, true)."</pre>";
 			
 					// If the ID is not numeric, skip it
 					if (is_numeric($article['cp_id'])) {
@@ -892,9 +843,9 @@ class CP_Import {
 							echo __('none found')."<br/>";
 							
 						// insert the article into the Wordpress database, and get it's new ID
-						//$wp_id = wp_insert_post($article);
-						echo "<pre>".print_r($article,true)."</pre>";
-die();
+						$wp_id = wp_insert_post($article);
+						//echo "<pre>".print_r($article,true)."</pre>";
+
 						// set the new article's ID to that of CP
 						$query = $this->wpdb->prepare("UPDATE ".$this->wpdb->posts." SET ID = %d WHERE ID = %d", $article['cp_id'], $wp_id);
 						$this->wpdb->query($query);
@@ -963,7 +914,7 @@ die();
 							add_post_meta($wp_id, 'subheadline', $article['post_sub_title']);
 							
 						// if we are to attach author name as custom fields, do so
-						if ( get_option("cp_import_user") == "fields")
+						if ( $this->user_type == "fields")
 							add_post_meta($wp_id, 'author', $article['post_author_name']);
 							
 						//echo "<pre>".print_r($a[$article['cp_id']],true)."</pre>";
