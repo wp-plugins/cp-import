@@ -19,8 +19,6 @@
  *
  * @filesource
  */
-global $wpdb;
-
 require("cp-import.class.php");
 
 /**
@@ -51,4 +49,5 @@ add_option("cp_import_default_user", "1", "", "no");
 add_option("cp_import_username_before", "", "", "no");
 add_option("cp_import_username_after", "", "", "no");
 add_option("cp_import_media_file", "", "", "no");
+add_option("cp_import_verbose", "0", "", "no");
 ?>

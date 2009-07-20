@@ -85,10 +85,13 @@ class CP_Import {
 	var $wpdb;
 	
 	/**
+	 * @var integer verbose
+	 */
+
+	/**
 	 * @var boolean DEBUG
 	 */
 	var $DEBUG = 0;
-	
 
 	/*
 	 * CP_Import
@@ -107,7 +110,7 @@ class CP_Import {
 		$this->user_type 	= get_option('cp_import_user');
 		$this->username_prefix	= get_option('cp_import_username_before');
 		$this->username_suffix	= get_option('cp_import_username_after');
-
+		$this->verbose		= get_option('cp_import_verbose');
 		
 		$this->date_format 	= "Y-m-d H:i:s";
 
@@ -390,12 +393,20 @@ class CP_Import {
 
 			if (!isset($this->archive_file))
 				$this->archive_file = $file['file'];
-				
+			else
+				$this->archive_file = $_GET['archive'];
+			
 			echo "<p>".__('Your archive file has been successfully uploaded!')."</p>";
+
+			echo "<h3>".__('Step 5: Upload Your Media File')."</h3>";
 
 			if ($_GET['newfile'] == 1) {
 				update_option("cp_import_media_file", "");
+				$this->media_file = "";
 			}
+
+			echo "<p>".__('<b>REMEMBER</b> to upload the contents of your media <u>folder</u> (paperXXXX) to '.$this->media_dir.'. The importer will look for the files referenced in your media <u>file</u> in this location.');
+			echo "<b> ".__('Do this before proceeding!')."</b></p>";
 
 			if (strlen($this->media_file)) {
 				// User has already uploaded a media file
@@ -405,14 +416,9 @@ class CP_Import {
 				echo "<p><a href=\"tools.php?page=cp-import/cp-import.php&amp;step=2&amp;newfile=1&amp;archive=".$this->archive_file."\">".__('No, I want to use a different file')."</a></p>";
 			}
 			else {
-				echo "<p>".__('Now, we need to upload your media file and folder.')."</p>";
+				echo "<p>".__('Now, we need to upload your media file.')."</p>";
 				
-				echo "<p>".__('<b>REMEMBER</b> to upload the contents of your media <u>folder</u> (paperXXXX) to '.$this->media_dir.'. The importer will look for the files referenced in your media <u>file</u> in this location.');
-				
-				echo "<b>".__('Do this before uploading your media <u>file</u> below!</b>')."</p>";		
-				echo "<h3>".__('Step 5: Upload Your Media File')."</h3>";
-							
-				wp_import_upload_form("tools.php?page=cp-import/cp-import.php&amp;step=3&archive=".$file['file']);
+				wp_import_upload_form("tools.php?page=cp-import/cp-import.php&amp;step=3&archive=".$this->archive_file);
 			}
 		}
 		echo "</div>";
@@ -433,12 +439,15 @@ class CP_Import {
 
 		$file = wp_import_handle_upload();
 
-		if (isset($file['file']) || isset($this->media_file)) {
+		if (isset($file['file']) || !isempty($this->media_file)) {
 
 			if (!isset($this->media_file))
 				$this->media_file = $file['file'];
+			else if (empty($this->media_file))
+				$this->media_file = $file['file'];
 			
 			update_option("cp_import_media_file", $this->media_file);
+			
 			echo "<p>".__('Media file successfully uploaded!')."</p>";
 					
 			echo "<h3>".__('Step 6: Verify that everything is here')."</h3>";
@@ -722,7 +731,7 @@ class CP_Import {
 	/*
 	 * get_date_elements
 	 *
-	 * @param oOrdpress-formatted date
+	 * @param Wordpress-formatted date
 	 *
 	 * @return array containing the year, month and day values from the parameter string.
 	 *
@@ -741,6 +750,30 @@ class CP_Import {
 			echo "<pre>get_date_elements returning:".print_r($ret, true)."</pre>";
 	
 		return $ret;
+	}
+
+	/**
+	 * optimizeMediaFile
+	 *
+	 */
+	function optimizeMediaFile() {
+
+		$hndl = fopen($this->media_file, "r");
+		$r = array();
+
+		while (($i = fgetcsv($hndl, 1024)) !== FALSE) {
+			
+			$t['file'] = $i[1];
+			$t['caption'] = $i[2];
+			$t['credit'] = $i[3];
+
+			$n = count($r[$i[0]]);
+
+			$r[$i[0]][$n] = $t;
+
+		}
+
+		return $r;
 	}
 
 	/*
@@ -786,7 +819,7 @@ class CP_Import {
 				//
 				// Get a handle for the CSV files
 				$archive_hndl = fopen($this->archive_file, "r");
-				$media_hndl = fopen($this->media_file, "r");
+				$media_hndl = $this->optimizeMediaFile();//($this->media_file);//fopen($this->media_file, "r");
 
 				$this->ui_header();
 
@@ -834,19 +867,10 @@ class CP_Import {
 						// media associated with the post, this will have no effect.
 						$article['post_content'] .= "<p>[gallery]</p>";
 
-						// search for media associated with this article. if found, simply append the [gallery]
-						// tag to the article's content
-						if (isset($a[$article['cp_id']])) {
-							echo sizeof($a[$article['cp_id']]).__(' found!')."<br />";
-							$article['post_content'] .= "<p>[gallery]</p>";
-						}
-						else
-							echo __('none found')."<br/>";
-							
 						// insert the article into the Wordpress database, and get it's new ID
-						//$wp_id = wp_insert_post($article);
-						echo "<pre>".print_r($article,true)."</pre>";
-die();
+						$wp_id = wp_insert_post($article);
+						//echo "<pre>".print_r($article,true)."</pre>";
+						
 						// set the new article's ID to that of CP
 						$query = $this->wpdb->prepare("UPDATE ".$this->wpdb->posts." SET ID = %d WHERE ID = %d", $article['cp_id'], $wp_id);
 						$this->wpdb->query($query);
@@ -918,65 +942,66 @@ die();
 						if ( $this->user_type == "fields")
 							add_post_meta($wp_id, 'author', $article['post_author_name']);
 							
-						//echo "<pre>".print_r($a[$article['cp_id']],true)."</pre>";
-							
-						/* if the media XLS has media for this post, find it
-							if (isset($a[$article['cp_id']])) {
-							
-								// there could be muliple pieces of media per article, so loop
-								foreach ($a[$article['cp_id']] as $img) {
-							
-									$attach = array();
-									$attach['post_content'] = $img['caption']."<br /><br />Credit: ".$img['credit'];
-									$attach['post_title'] = "IMAGE: ".$article['post_title'];
-									$attach['post_author'] = $img['credit'];
-										$attach['comment_status'] = 'closed';
-									$attach['post_date'] = $article['post_date'];
-									$attach['post_date_gmt'] = $article['post_date'];
-									
-									$attach = $this->process_author(&$attach);
-									$attach = $this->get_user_id(&$attach);
-								
-									echo "&nbsp;&nbsp;&nbsp;".__('Importing media...');
-									//echo "<pre>".print_r($img,true)."</pre>";
-									//echo "<pre>".print_r($attach,true)."</pre>";
-							
-									// make sure that the file refereneced exists
-									if (!file_exists(WP_CONTENT_DIR."/cp-import".$img['file']))
-										echo __('File not found: ')."<b>".$this->media_dir_h.$img['file']."</b><br />";
-									else {
-										// determine paths where this media will be saved at
-										$rel_path = date("Y") . "/" . date("m") . "/" . basename ($img['file']);	
-										$dest_path = get_option('upload_path') . "/" . $rel_path;
-									
-										// get the mime type. this is important 
-										$attach['post_mime_type'] = $this->get_mime(WP_CONTENT_DIR."/cp-import".$img['file']);
-										$attach['guid'] = get_option('siteurl') ."/". $dest_path;
-										
-										// copy the media from wp-content/cp-import to the Wordpress media repository
-										@copy (	$this->media_dir.$img['file'],
-											ABSPATH . $dest_path );
-										// insert the media into the WP database
-										$attach_id = wp_insert_attachment($attach, false, $wp_id);
-										// generate basic metadata
-										$attach_meta = wp_generate_attachment_metadata( $attach_id, ABSPATH . $dest_path );
-										// update the generated meta data.
-										wp_update_attachment_metadata( $attach_id, $attach_meta);
-										// add another piece of metadata
-										add_post_meta($attach_id, "_wp_attached_file", $rel_path, true);
-										// we're done!
-										echo __('done!')."<br />";
-									}
-								} // end foreach
-							} // end if media. */
+						echo __('&nbsp;&nbsp;&nbsp;Searching for media...');
 						
-							// congratualtions!
-							echo "&nbsp;&nbsp;&nbsp;".__('done!')."</i><br/>";
-							$count++;
-						} // end non-numeric
-				
+						// if the media array has media for this post, find it
+						if (isset($media_hndl[$article['cp_id']])) {
+							
+							echo __('found!')."<br />";
+							
+							// there could be muliple pieces of media per article, so loop
+							foreach ($media_hndl[$article['cp_id']] as $img) {
+							
+								$attach = array();
+								$attach['post_content'] = $img['caption']."<br /><br />Credit: ".$img['credit'];
+								$attach['post_title'] = "IMAGE: ".$article['post_title'];
+								$attach['post_author'] = $img['credit'];
+								$attach['comment_status'] = 'closed';
+								$attach['post_date'] = $article['post_date'];
+								$attach['post_date_gmt'] = $article['post_date'];
+								
+								$attach = $this->process_author(&$attach);
+								$attach = $this->get_user_id(&$attach);
+								
+								echo "&nbsp;&nbsp;&nbsp;".__('Importing media...');
+								//echo "<pre>".print_r($img,true)."</pre>";
+								//echo "<pre>".print_r($attach,true)."</pre>";
+							
+								// make sure that the file refereneced exists
+								if (!file_exists(WP_CONTENT_DIR."/cp-import".$img['file']))
+									echo __('File not found: ')."<b>".$this->media_dir_h.$img['file']."</b><br />";
+								else {
+									// determine paths where this media will be saved at
+									$rel_path = date("Y") . "/" . date("m") . "/" . basename ($img['file']);	
+									$dest_path = get_option('upload_path') . "/" . $rel_path;
+								
+									// get the mime type. this is important 
+									$attach['post_mime_type'] = $this->get_mime(WP_CONTENT_DIR."/cp-import".$img['file']);
+									$attach['guid'] = get_option('siteurl') ."/". $dest_path;
+										
+									// copy the media from wp-content/cp-import to the Wordpress media repository
+									@copy (	$this->media_dir.$img['file'],
+										ABSPATH . $dest_path );
+									// insert the media into the WP database
+									$attach_id = wp_insert_attachment($attach, false, $wp_id);
+									// generate basic metadata
+									$attach_meta = wp_generate_attachment_metadata( $attach_id, ABSPATH . $dest_path );
+									// update the generated meta data.
+									wp_update_attachment_metadata( $attach_id, $attach_meta);
+									// add another piece of metadata
+									add_post_meta($attach_id, "_wp_attached_file", $rel_path, true);
+									// we're done!
+									echo __('done!')."<br />";
+								}
+							} // end foreach
+						} // end if media. */
+						
+						// congratualtions!
+						echo "&nbsp;&nbsp;&nbsp;".__('done!')."</i><br/>";
+						$count++;
+					} // end non-numeric
+				die();
 				} // end while
-
 				// Undo ini changes
 				ini_set('auto_detect_line_endings',$auto_detect_line_endings);
 
