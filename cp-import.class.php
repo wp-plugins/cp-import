@@ -99,7 +99,7 @@ class CP_Import {
 		$this->step = (isset($_GET['step'])) ? $_GET['step'] : 1;
 
 		$this->paper_id = get_option('cp_import_paper_id');
-		$this->import_from = get_ovxvc;ption('cp_import_from');
+		$this->import_from = get_option('cp_import_from');
 		
 		$this->date_format = "Y-m-d H:i:s";
 		$this->cp4link = "/media/storage/paper".$this->paper_id."/news/%year%/%monthnum%/%day%/%category%/%postname%-%post_id%.shtml";
@@ -561,8 +561,11 @@ class CP_Import {
 	 * @since 1.0
 	 */
 	function get_user_id ( $article ) {
+
+		$account = $this->username_prefix . $article['post_author'] . $this->username_suffix;
+	
 		$exists = username_exists($article['post_author']);
-		echo "&nbsp;&nbsp;&nbsp;".__('Searching for author "'.$article['post_author'].'"... ');
+		echo "&nbsp;&nbsp;&nbsp;".__('Searching for account "'.$account.'"... ');
 		$name = $article['post_author'];
 
 		switch (get_option("cp_import_user")) {
@@ -826,8 +829,8 @@ class CP_Import {
 				// Here is where the action REALLY happens
 				//
 				// Get a handle for the CSV files
-				$archive_hndl = fopen($this->archive_file);
-				$media_hndl = fopen($this->media_file);
+				$archive_hndl = fopen($this->archive_file, "r");
+				$media_hndl = fopen($this->media_file, "r");
 
 				$this->ui_header();
 
@@ -841,14 +844,16 @@ class CP_Import {
 				// Loop through each of the articles.
 				while (($row = fgetcsv($archive_hndl, 16384)) !== FALSE) {
 						
-					$article['cp_id']			= $row[1];
-					$article['post_title']		= $row[5];
-					$article['post_sub_title']	= $row[6];
-					$article['post_content']	= $row[8];
-					$article['post_author']		= $row[9];
-					$article['post_category']	= array($row[4]);
-					$article['post_date']		= $row[3];
-					$article['post_excerpt']	= $row[7];
+					echo "<pre>".print_r($row, true)."</pre>";
+
+					$article['cp_id']		= $row[0];
+					$article['post_title']		= $row[4];
+					$article['post_sub_title']	= $row[5];
+					$article['post_content']	= $row[7];
+					$article['post_author']		= $row[8];
+					$article['post_category']	= array($row[3]);
+					$article['post_date']		= $row[2];
+					$article['post_excerpt']	= $row[6];
 						
 					// default values
 					$article['post_type']		= "post";
@@ -858,6 +863,8 @@ class CP_Import {
 					// transform data into Wordpress formats
 					$article = $this->process_date(&$article);
 					$article = $this->process_author(&$article);
+					
+					echo "<pre>".print_r($article, true)."</pre>";
 			
 					// If the ID is not numeric, skip it
 					if (is_numeric($article['cp_id'])) {
@@ -885,9 +892,9 @@ class CP_Import {
 							echo __('none found')."<br/>";
 							
 						// insert the article into the Wordpress database, and get it's new ID
-						$wp_id = wp_insert_post($article);
-						//echo "<pre>".print_r($article,true)."</pre>";
-
+						//$wp_id = wp_insert_post($article);
+						echo "<pre>".print_r($article,true)."</pre>";
+die();
 						// set the new article's ID to that of CP
 						$query = $this->wpdb->prepare("UPDATE ".$this->wpdb->posts." SET ID = %d WHERE ID = %d", $article['cp_id'], $wp_id);
 						$this->wpdb->query($query);
