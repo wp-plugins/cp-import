@@ -105,20 +105,21 @@ class CP_Import {
 		$this->paper_id		= get_option('cp_import_paper_id');
 		$this->import_from 	= get_option('cp_import_from');
 		$this->user_type 	= get_option('cp_import_user');
+		$this->username_prefix	= get_option('cp_import_username_before');
+		$this->username_suffix	= get_option('cp_import_username_after');
+
 		
 		$this->date_format 	= "Y-m-d H:i:s";
 
 		$this->cp4link		= "/media/storage/paper" . $this->paper_id . 
-							  "/news/%year%/%monthnum%/%day%/%category%" . 
-							  "/%postname%-%post_id%.shtml";
+					  "/news/%year%/%monthnum%/%day%/%category%" . 
+					  "/%postname%-%post_id%.shtml";
 		$this->cp5link		= "/%category%/%postname%-1.%post_id%";
 		
 		$this->media_dir	= WP_CONTENT_DIR."/cp-import/";
 		$this->media_dir_h	= basename(dirname($this->media_dir)) . 
 							  "/" . basename($this->media_dir) . "/";
-		$this->media_file	= ($_GET['media']) ? 
-								$_GET['media'] :
-								get_option('cp_import_media_file');
+		$this->media_file	= (isset($_GET['media'])) ? $_GET['media'] : get_option('cp_import_media_file');
 
 		$this->archive_file = $_GET['archive'];
 		
@@ -316,7 +317,7 @@ class CP_Import {
 		foreach ($users as $user) {
 			
 			$user = get_userdata( $user );
-			$xhtml .= "<option value='".$user->ID."' ".(($this->default_user") == $user->ID) ? "selected='selected'" : "")."/>".(($user->first_name) ? $user->display_name : $user->user_login);
+			$xhtml .= "<option value='".$user->ID."' ".(($this->default_user == $user->ID) ? "selected='selected'" : "")."/>".(($user->first_name) ? $user->display_name : $user->user_login);
 		}
 
 		$xhtml .= "</select>";
@@ -563,7 +564,7 @@ class CP_Import {
 		$account = $this->username_prefix . $article['post_author'] . $this->username_suffix;
 
 		$exists = username_exists($account);
-		echo "&nbsp;&nbsp;&nbsp;".__('Searching for account:') . $account . "...";
+		echo "&nbsp;&nbsp;&nbsp;".__('Searching for account:') . " " . $account . "...";
 		$name = $article['post_author'];
 
 
@@ -843,9 +844,9 @@ class CP_Import {
 							echo __('none found')."<br/>";
 							
 						// insert the article into the Wordpress database, and get it's new ID
-						$wp_id = wp_insert_post($article);
-						//echo "<pre>".print_r($article,true)."</pre>";
-
+						//$wp_id = wp_insert_post($article);
+						echo "<pre>".print_r($article,true)."</pre>";
+die();
 						// set the new article's ID to that of CP
 						$query = $this->wpdb->prepare("UPDATE ".$this->wpdb->posts." SET ID = %d WHERE ID = %d", $article['cp_id'], $wp_id);
 						$this->wpdb->query($query);
