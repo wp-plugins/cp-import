@@ -439,7 +439,7 @@ class CP_Import {
 
 		$file = wp_import_handle_upload();
 
-		if (isset($file['file']) || !isempty($this->media_file)) {
+		if (isset($file['file']) || !empty($this->media_file)) {
 
 			if (!isset($this->media_file))
 				$this->media_file = $file['file'];
@@ -573,7 +573,7 @@ class CP_Import {
 		$account = $this->username_prefix . $article['post_author'] . $this->username_suffix;
 
 		$exists = username_exists($account);
-		echo "&nbsp;&nbsp;&nbsp;".__('Searching for account:') . " " . $account . "...";
+		if ($this->verbose) echo "&nbsp;&nbsp;&nbsp;".__('Searching for account:') . " " . $account . "...";
 		$name = $article['post_author'];
 
 
@@ -583,11 +583,11 @@ class CP_Import {
 			default:
 
 				if ($exists) {
-					echo __('found!')."<br/>";
+					if ($this->verbose) echo __('found!')."<br/>";
  				}
 				else {
 					$exists = wp_create_user ($account, md5(time()));
-				    echo __('new acount created!')."<br />";
+					if ($this->verbose) echo __('new acount created!')."<br />";
 				}
 				$article['post_author'] = $exists;
 				$this->set_user_info($id, $name);
@@ -601,13 +601,13 @@ class CP_Import {
 				else {
 					$article['post_author'] = 1;
 				}
-				echo __('found!')."<br/>";
+				if ($this->verbose) echo __('found!')."<br/>";
 				break;
 
 			case "none":
 				if ($exists) {
 					$article['post_author'] = $exists;
-					echo __('found!')."<br/>";
+					if ($this->verbose) echo __('found!')."<br/>";
 					$this->set_user_info($exists, $article['post_author_name']);
 				}
 				else {
@@ -662,9 +662,9 @@ class CP_Import {
 		$new_id = array();
 		
 		foreach ($cat_id as $id) {
-			echo "&nbsp;&nbsp;&nbsp;".__('Searching for category "'.$id.'"... ');
+			if ($this->verbose) echo "&nbsp;&nbsp;&nbsp;".__('Searching for category "'.$id.'"... ');
 			$new_id[] = wp_create_category($id);
-			echo __('done!')."<br />";
+			if ($this->verbose) echo __('done!')."<br />";
 		}
 	
 		$article['post_category'] = $new_id;
@@ -855,8 +855,8 @@ class CP_Import {
 					if (is_numeric($article['cp_id'])) {
 			
 						// begin output
-						echo __('Importing article: <i>').$article['post_title'].__('</i>...<br />');
-							
+						echo __('Importing article: ')."<i>".$article['post_title']."</i>...";
+						if ($this->verbose) echo "<br />";
 						// get the ID of this article's author
 						$article = $this->get_user_id(&$article);
 							
@@ -942,12 +942,12 @@ class CP_Import {
 						if ( $this->user_type == "fields")
 							add_post_meta($wp_id, 'author', $article['post_author_name']);
 							
-						echo __('&nbsp;&nbsp;&nbsp;Searching for media...');
+						if ($this->verbose) echo __('&nbsp;&nbsp;&nbsp;Searching for media...');
 						
 						// if the media array has media for this post, find it
 						if (isset($media_hndl[$article['cp_id']])) {
 							
-							echo __('found!')."<br />";
+							if ($this->verbose) echo __('found!')."<br />";
 							
 							// there could be muliple pieces of media per article, so loop
 							foreach ($media_hndl[$article['cp_id']] as $img) {
@@ -963,7 +963,7 @@ class CP_Import {
 								$attach = $this->process_author(&$attach);
 								$attach = $this->get_user_id(&$attach);
 								
-								echo "&nbsp;&nbsp;&nbsp;".__('Importing media...');
+								if ($this->verbose) echo "&nbsp;&nbsp;&nbsp;".__('Importing media...');
 								//echo "<pre>".print_r($img,true)."</pre>";
 								//echo "<pre>".print_r($attach,true)."</pre>";
 							
@@ -991,7 +991,7 @@ class CP_Import {
 									// add another piece of metadata
 									add_post_meta($attach_id, "_wp_attached_file", $rel_path, true);
 									// we're done!
-									echo __('done!')."<br />";
+									if ($this->verbose) echo __('done!')."<br />";
 								}
 							} // end foreach
 						} // end if media. */
@@ -1000,7 +1000,6 @@ class CP_Import {
 						echo "&nbsp;&nbsp;&nbsp;".__('done!')."</i><br/>";
 						$count++;
 					} // end non-numeric
-				die();
 				} // end while
 				// Undo ini changes
 				ini_set('auto_detect_line_endings',$auto_detect_line_endings);
