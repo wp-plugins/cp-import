@@ -201,7 +201,7 @@ sub process () {
 						print NEW_CP_ARCHIVE "\"$SubHeadline\",";
 						print NEW_CP_ARCHIVE "\"$Summary\",";
 						print NEW_CP_ARCHIVE "\"$Content\",";
-						print NEW_CP_ARCHIVE "\"$Author\"\n" or die $!;
+						print NEW_CP_ARCHIVE "\"$Author\"\r\n" or die $!;
 		
 						print " Done!\n";
 					} # End !$readOnly
