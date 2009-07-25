@@ -1,4 +1,5 @@
 CP Import To-Do list:
 
-- Eliminate the need for Excel.
-- Eliminate need to re-upload media file should it already exist
+- None!
+
+Email feature requests or bug reports to john@johnluetke.net with the subject "CP Import" or post a message on the support forum: http://wordpress.org/tags/cp-import
