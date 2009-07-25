@@ -35,7 +35,7 @@ function cp_import_admin_menu() {
 function cp_import_init() {
 	$CPImporter = new CP_Import();
 	
-	@$CPImporter->go();
+	$CPImporter->go();
 }
 
 // Adds the menu item for CP Import
