@@ -80,6 +80,12 @@ class CP_Import {
 	var $user_type;
 	
 	/**
+	 * @var integer default_user
+	 */
+	var $default_user;
+
+	
+	/**
 	 * @var Object $wpdb
 	 */
 	var $wpdb;
@@ -108,9 +114,10 @@ class CP_Import {
 		$this->paper_id		= get_option('cp_import_paper_id');
 		$this->import_from 	= get_option('cp_import_from');
 		$this->user_type 	= get_option('cp_import_user');
+		$this->default_user	= get_option('cp_import_default_user');
 		$this->username_prefix	= get_option('cp_import_username_before');
 		$this->username_suffix	= get_option('cp_import_username_after');
-		$this->verbose		= get_option('cp_import_verbose');
+		$this->verbose		= 0;//get_option('cp_import_verbose'); // Turning this on seems to stop the import after 600 article. It wil remain hardcoded off until a solution is found
 		
 		$this->date_format 	= "Y-m-d H:i:s";
 
@@ -205,13 +212,26 @@ class CP_Import {
 			<?php
 			if ($_POST) {
 
+				if ($this->DEBUG) echo "<pre>".print_r($_POST, true)."</pre>";
+
+				update_option("cp_import_from", $_POST['import_from']);
 				update_option("cp_import_user", $_POST['create_users']);
 				update_option("cp_import_default_user", $_POST['default_user']);
 				update_option("cp_import_username_before", $_POST['username_before']);
 				update_option("cp_import_username_after", $_POST['username_after']);
 				update_option("cp_import_paper_id", $_POST['paper_id']);
+				update_option("cp_import_verbose", $_POST['verbose']);
 
-				if ($_POST['url_structure'] == 1) { // CP URL's
+				// Refresh options
+				$this->paper_id		= $_POST['paper_id'];
+				$this->default_user	= $_POST['default_user'];
+				$this->import_from 	= $_POST['import_from'];
+				$this->user_type 	= $_POST['create_users'];
+				$this->username_prefix	= $_POST['username_before'];
+				$this->username_suffix	= $_POST['username_after'];
+				$this->verbose		= $_POST['verbose'];
+
+				if ($_POST['url_structure'] == 1 && $_POST['paper_id'] != "") { // CP URL's
 					switch ($_POST['import_from']) {
 						case 4:
 						default:
@@ -288,6 +308,13 @@ class CP_Import {
 				<tr><td valign="top" >&nbsp;</td></tr>
 				<tr><td valign="top" >&nbsp;</td></tr>
 				<tr>
+					<td align="top">Enable Verbose mode?</td>
+					<td valign="top"><input type="radio" name="verbose" value="1" group="verbose" <?php echo (($this->verbose) ? "checked='checked' " : ""); ?> disabled="disabled"/>&nbsp;&nbsp;&nbsp;Yes<br /><input type="radio" name="verbose" value="0" group="verbose" <?php echo ((!$this->verbose) ? "checked='checked' " : ""); ?> />&nbsp;&nbsp;&nbsp;No</td>
+					<td valign="top">Would you like additional output displayed when importing articles?</td>
+				</tr>
+				<tr><td valign="top" >&nbsp;</td></tr>
+				<tr><td valign="top" >&nbsp;</td></tr>
+				<tr>
 					<td valign="top" >
 						<input type="submit" value="Save Options" class="button" />
 					</td>
@@ -339,34 +366,28 @@ class CP_Import {
 		$this->ui_header();
 		echo "<div class='narrow' style='float: left;'>";
 		echo "<p>".__('Hey there, this plugin makes moving from <a href="http://collegepublisher.com/">College Publisher</a> (CP) to Wordpress a snap. Just follow the directions below and on the subsequent screens.')."</p>";
-		echo "<p>".__('There are a few rules and guidelines, though. See the <a href="http://johnluetke.net/software/cp-import">documentation</a> for the most up-to-date information.')."</p>";
+		echo "<p>".__('There are a few rules and guidelines, though. See the <a href="http://wordpress.org/tags/cp-import">documentation</a> for the most up-to-date information.')."</p>";
 		echo "<p>".__('Here is what you will need to use this importer:')."</p>";
 		echo "<ul>";
-		echo "<li>".__('- A text editor (Notepad, TextEdit, TextMate, etc.)')."</li>";
-		echo "<li>".__('- Microsoft Excel or other spreadsheet program that can save in .xls format')."</li>";
+		echo "<li>".__('- A Perl Interpreter')."</li>";
 		echo "<li>".__('- Your archive file: Export_Story_Table_XXXX_XX-XX-XXXX.csv')."</li>";
 		echo "<li>".__('- Your media file: Export_Story_Media_Table_XXX-XX-XX-XXXX.csv')."</li>";
 		echo "<li>".__('- Your media folder (paperXXXX)')."</li>";
 		echo "</ul>";
 		
-		echo "<p>".__('Note that this version of CP Import was built using export files from College Publisher 4.0, and thus is untested with export files from CP 5. If you are coming from CP 5, please proceed at your own risk. If you can get me your export files, I will try to make this compatible with CP 5.')."</p>";
+		echo "<p>".__('CP Import is not yet compatible with College Publisher 5. If you are coming from CP 5, please proceed at your own risk. If you can get me your export files, I will make this compatible with CP 5.')."</p>";
 		
 		echo "<h3>".__('Prerequisite Actions')."</h3>";
 		echo "<p>".__('Be sure to check out the <a href="tools.php?page="cp-import/cp-import.php&amp;step=options">Options</a> page before importing to customize CP Import\'s behavior.')."</p>";
 		echo "<p>".__('The following things must be done <b><i>BEFORE</i></b> you begin using this plugin:')."</p>";
 		echo "<ol>";
 		echo "<li>".__('Upload the contents of your media folder to <b>wp_content/cp-import/</b>. Be warned: This will take a <i>long</i> time.')."</li>";
-		echo "<li>".__('Open your archive file in a text editor. Search for an area where a line break is, highlight only the whitespace around that line break, and copy it. (See screenshot-5.png)');
-		echo "<ol>";
-		echo "<li>".__('Perform a "Search and Replace". Paste the whitespace that you copied in the "Search for" field, and leave the "Replace" field blank.');
-		
-		echo "<li>".__('Save the file with a new name.');
-		echo "</ol>";
-		echo "<li>".__('Open your archive file with Excel, and save the file as <b>.xls</b> (NOT <b>.xslx</b>)')."</li>";
-		echo "<ol>";
-		echo "<li>".__('<i>NOTE</i>: If Excel crashes while trying to open the file, you will have to break it into smaller pieces. Use your own discretion here.')."</li>";
-		echo "<li>".__('Open your media file with Excel, and also save it in <b>.xls</b> format.')."</li>";
-		echo "</ol>";
+		echo "<li>".__('Run the included Perl script (<span style="font-family: Courier New;">cp-import-prepare.pl</span>) with your archive file as the first parameter and the name of the new file as the second parameter')."</li>";
+		echo "<ul>";
+		echo "<li>".__('From the command line, it will look something like this: <span style="font-family: Courier New;">perl cp-import-prepare.pl Archive.csv New_Archive.csv</span>')."</li>";
+		echo "<li>".__('This script will remove all extra line breaks from your Export file and format the post content in HTML (if it is not already).')."</li>";
+		echo "</ul>";
+		echo "<li>".__('Due to default PHP settings, it is recommended that you break up your newly-formatted archive file into chunks of 1000 articles. This will prevent CP Import from running longer than PHP allows scripts to run and "timing out".')."</li>";
 		echo "</ol>";
 		echo "<h3>".__('Step 4: Upload your archive file')."</h3>";
 		
@@ -487,7 +508,7 @@ class CP_Import {
 			'or "too large", you\'ll need to break your archive file into smaller chunks. If that happens, you\'ll '.
 			'still need to go through the motions of this importer with each of the smaller chunks, but you DO NOT '.
 			'need to re-upload your media folder. If any other weird errors happen, '.
-			'<a href="http://johnluetke.net/software/cp-import">see the documentation</a>. Good luck, and happy Wordpress\'ing!</p>');
+			'<a href="http://wordpress.org/tags/cp-import">see the documentation</a>. Good luck, and happy Wordpress\'ing!</p>');
 			
 			echo "<p><form action='tools.php?page=cp-import/cp-import&step=4&archive=".$this->archive_file."&media=".$this->media_file."' method='post'><input type='submit' class='button' value='".__('Import my College Publisher Archives!')."' /></form></p>";
 			
