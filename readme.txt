@@ -4,7 +4,7 @@ Donate link: http://johnluetke.net
 Tags: import, college, publisher
 Requires at least: 2.7.1
 Tested up to: 2.8.1
-Stable tag: 1.1
+Stable tag: 1.5
 
 Import your College Publisher archives into Wordpress
 
@@ -38,7 +38,7 @@ Yes. This plugin was developed using Wordpress MU, but does not use any MU-speci
 
 This plugin was written using CP 4 export files. It has not been tested with CP 5 export files. If you have CP 5 export files and would like to send them to me, I will try to make this plugin compatible.
 
-Version 1.1 introduces experimental support for CP5.
+Version 1.5 introduces partial support for CP5.
 
 = Will this import my paper's Custom Pages? =
 
@@ -62,5 +62,4 @@ Lastly, Thank Wordpress, for developing such a customizable publishing platform.
 2. Step 5, Upload your media file
 3. Step 6, Verify that all files and folders are present
 4. Step 7, Progress indicator
-5. Example of a line break. (See step #2)
 
