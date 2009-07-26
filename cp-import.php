@@ -1,7 +1,7 @@
 <?php
 /*
  * Plugin Name: CP Import
- * Version: 1.0
+ * Version: 1.5
  * Plugin URI: http://johnluetke.net/software/cp-import
  * Description: CP Import allows you to import your <b>articles, authors, categories, and media<b> from a College Publisher export file <br />[<a href="tools.php?page=cp-import/cp-import.php">Import</a> | <a href="http://johnluetke.net/software/cp-import">Help</a>]
  * Author: John Luetke
