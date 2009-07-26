@@ -194,7 +194,7 @@ class CP_Import {
 	 *
 	 * Displays customizable settings for CP Import's behavior
 	 *
-	 * @since 1.1
+	 * @since 1.5
 	 */
 	function ui_options () {
 		$this->ui_header();
@@ -306,9 +306,9 @@ class CP_Import {
 	 *
 	 * Echos a drop-down list of all the user accounts on this instance
 	 *
-	 * @return
+	 * @return HTML select list
 	 *
-	 * @since 1.1
+	 * @since 1.5
 	 */
 	function ui_userlist() {
 		global $wpdb;
@@ -735,7 +735,7 @@ class CP_Import {
 	 *
 	 * @return array containing the year, month and day values from the parameter string.
 	 *
-	 * @since 1.1
+	 * @since 1.5
 	 */
 	function get_date_elements( $date ) {
 		if ($this->DEBUG)
@@ -754,6 +754,12 @@ class CP_Import {
 
 	/**
 	 * optimizeMediaFile
+	 *
+	 * Optimizes $this->media_file into a nested array by article_id.
+	 *
+	 * @return array
+	 *
+	 * @since 1.0
 	 *
 	 */
 	function optimizeMediaFile() {
