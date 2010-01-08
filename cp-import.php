@@ -20,6 +20,7 @@
  * @filesource
  */
 require("cp-import.class.php");
+require("cp-import-prepare.class.php");
 
 /**
  * 
@@ -42,12 +43,5 @@ function cp_import_init() {
 add_action('admin_menu', 'cp_import_admin_menu');
 
 // Add options. If they already exist, nothing will happen.
-add_option("cp_import_from", "4", "", "no");
-add_option("cp_import_user", "accounts", "", "no");
-add_option("cp_import_paper_id", "", "", "no");
-add_option("cp_import_default_user", "1", "", "no");
-add_option("cp_import_username_before", "", "", "no");
-add_option("cp_import_username_after", "", "", "no");
-add_option("cp_import_media_file", "", "", "no");
-add_option("cp_import_verbose", "0", "", "no");
+add_option("cp-import-options", array ('paper_id' => '', 'from_version' => 4,'users' => 'accounts','default_user' => 1,'verbose' => false, 'date_fmt' =>'Y-m-d H:i:s', 'cp4url' => '"/media/storage/paper%s/news/%year%/%monthnum%/%day%/%category%/%postname%-%post_id%.shtml', 'cp5url' => '/%category%/%postname%-1.%post_id%"', 'media_dir' => WP_CONTENT_DIR."/cp-import/", 'media_dir_hr' => basename(dirname(WP_CONTENT_DIR."/cp-import/"))."/" . basename(WP_CONTENT_DIR."/cp-import/")."/", 'media_file' => "", 'archive_file' => ""));
 ?>

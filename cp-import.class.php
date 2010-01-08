@@ -23,81 +23,10 @@
  */
 class CP_Import {
 
-
-	/**
-	 * @var array $articles
-	 */
-	var $articles;
-	
-	/**
-	 * @var string $date_format
-	 */
-	var $date_format;
-	
-	/**
-	 * @var string $archive_file
-	 */
-	var $archive_file;
-	
-	/**
-	 * @var string $media_file
-	 */
-	var $media_file;
-	
-	/**
-	 * @var string $media_dir
-	 */
-	var $media_dir;
-
-	/**
-	 * @var string $media_dir_h
-	 */
-	var $media_dir_h;
-
-	/**
-	 * @var string $cp4link
-	 */
-	var $cp4link;
-
-	/**
-	 * @var string $cp5link
-	 */
-	var $cp5link;
-
-	/**
-	 * @var integer paper_id
-	 */
-	var $paper_id;
-
-	/**
-	 * @var integer import_from
-	 */
-	var $import_from;
-
-	/**
-	 * @var integer user_type
-	 */
-	var $user_type;
-	
-	/**
-	 * @var integer default_user
-	 */
-	var $default_user;
-
-	
-	/**
-	 * @var Object $wpdb
-	 */
-	var $wpdb;
-	
-	/**
-	 * @var integer verbose
-	 */
-
 	/**
 	 * @var boolean DEBUG
 	 */
-	var $DEBUG = 0;
+	var $DEBUG = true;
 
 	/*
 	 * CP_Import
@@ -111,32 +40,21 @@ class CP_Import {
 		
 		$this->step = (isset($_GET['step'])) ? $_GET['step'] : 1;
 
-		$this->paper_id		= get_option('cp_import_paper_id');
-		$this->import_from 	= get_option('cp_import_from');
-		$this->user_type 	= get_option('cp_import_user');
-		$this->default_user	= get_option('cp_import_default_user');
-		$this->username_prefix	= get_option('cp_import_username_before');
-		$this->username_suffix	= get_option('cp_import_username_after');
-		$this->verbose		= 0;//get_option('cp_import_verbose'); // Turning this on seems to stop the import after 600 article. It wil remain hardcoded off until a solution is found
-		
-		$this->date_format 	= "Y-m-d H:i:s";
-
-		$this->cp4link		= "/media/storage/paper" . $this->paper_id . 
-					  "/news/%year%/%monthnum%/%day%/%category%" . 
-					  "/%postname%-%post_id%.shtml";
-		$this->cp5link		= "/%category%/%postname%-1.%post_id%";
-		
-		$this->media_dir	= WP_CONTENT_DIR."/cp-import/";
-		$this->media_dir_h	= basename(dirname($this->media_dir)) . 
-							  "/" . basename($this->media_dir) . "/";
-		$this->media_file	= (isset($_GET['media'])) ? $_GET['media'] : get_option('cp_import_media_file');
-
-		$this->archive_file = $_GET['archive'];
-		
-		$this->wpdb = $wpdb;
+		$this->options = get_option('cp-import-options');
 
 		if ($this->DEBUG)
 			echo "<pre>".print_r($this, true)."</pre>";
+	}
+
+	/**
+	 * save_options
+	 *
+	 * Saves $this->options to the database
+	 *
+	 * @since 2.0
+	 */
+	function save_options() {
+		update_option("cp-import-options", $this->options);
 	}
 
 	/*
@@ -148,7 +66,7 @@ class CP_Import {
 	 */
 	function ui_header() {
 		echo "<div class='wrap'>\n";
-		echo "<h2 style='padding-bottom: 0px;'>".__('CP Import')."</h2>";
+		echo "<div style='padding: 20px 0px 0px 0px;'><img src='".get_bloginfo('home')."/wp-content/plugins/cp-import/cpimport.gif'</div>";
 		echo "<p>";
 
 		if (is_numeric($this->step))
@@ -369,7 +287,6 @@ class CP_Import {
 		echo "<p>".__('There are a few rules and guidelines, though. See the <a href="http://wordpress.org/tags/cp-import">documentation</a> for the most up-to-date information.')."</p>";
 		echo "<p>".__('Here is what you will need to use this importer:')."</p>";
 		echo "<ul>";
-		echo "<li>".__('- A Perl Interpreter')."</li>";
 		echo "<li>".__('- Your archive file: Export_Story_Table_XXXX_XX-XX-XXXX.csv')."</li>";
 		echo "<li>".__('- Your media file: Export_Story_Media_Table_XXX-XX-XX-XXXX.csv')."</li>";
 		echo "<li>".__('- Your media folder (paperXXXX)')."</li>";
@@ -381,17 +298,16 @@ class CP_Import {
 		echo "<p>".__('Be sure to check out the <a href="tools.php?page="cp-import/cp-import.php&amp;step=options">Options</a> page before importing to customize CP Import\'s behavior.')."</p>";
 		echo "<p>".__('The following things must be done <b><i>BEFORE</i></b> you begin using this plugin:')."</p>";
 		echo "<ol>";
-		echo "<li>".__('Upload the contents of your media folder to <b>wp_content/cp-import/</b>. Be warned: This will take a <i>long</i> time.')."</li>";
-		echo "<li>".__('Run the included Perl script (<span style="font-family: Courier New;">cp-import-prepare.pl</span>) with your archive file as the first parameter and the name of the new file as the second parameter')."</li>";
-		echo "<ul>";
-		echo "<li>".__('From the command line, it will look something like this: <span style="font-family: Courier New;">perl cp-import-prepare.pl Archive.csv New_Archive.csv</span>')."</li>";
-		echo "<li>".__('This script will remove all extra line breaks from your Export file and format the post content in HTML (if it is not already).')."</li>";
-		echo "</ul>";
-		echo "<li>".__('Due to default PHP settings, it is recommended that you break up your newly-formatted archive file into chunks of 1000 articles. This will prevent CP Import from running longer than PHP allows scripts to run and "timing out".')."</li>";
+		echo "<li>".__('Upload the contents of your media folder to:')." <b>".$this->options['media_dir_hr']."</b> ".__('Be warned: This will take a <i>long</i> time.')."</li>";
+		echo "<li>".__('Due to default PHP settings, and the large size of College Publisher&apos;s export files, CP Import will automatically break your uploaded archive file into chunks of 1000 articles. This will prevent CP Import from running longer than PHP allows scripts to run and "timing out".')."</li>";
 		echo "</ol>";
-		echo "<h3>".__('Step 4: Upload your archive file')."</h3>";
-		
+		echo "<h3>".__('Step 3: Specify your archive file')."</h3>";
 		wp_import_upload_form("tools.php?page=cp-import/cp-import.php&amp;step=2");
+		echo "<p><strong>".__('OR')."</strong></p>";
+		echo "<form method='post' action='tools.php?page=cp-import/cp-import.php&amp;step=2'>";
+		echo __('Enter the path of an archive file already on your webserver:');
+		echo " <input type='text' name='archive_file_typed' size='25' value='".$this->options['archive_file']."'/>";
+		echo "<p><input type='submit' value='     ".__('Next')."     ' /></form>";
 		echo "</div>";
 		$this->ui_donate();
 		$this->ui_footer();
@@ -410,38 +326,29 @@ class CP_Import {
 		
 		$file = wp_import_handle_upload();
 
-		if ( isset($file['file']) || isset($_GET['archive']) ) {
+		if ( isset($file['file']) )
+			$this->options['archive_file'] = $file['file'];
+		else if ( isset($_POST['archive_file_typed']) && is_file($_POST['archive_file_typed']) )
+			$this->options['archive_file'] = $_POST['archive_file_typed'];
+		else
+			die($file['error']);
 
-			if (!isset($this->archive_file))
-				$this->archive_file = $file['file'];
-			else
-				$this->archive_file = $_GET['archive'];
-			
-			echo "<p>".__('Your archive file has been successfully uploaded!')."</p>";
+		$this->save_options();
 
-			echo "<h3>".__('Step 5: Upload Your Media File')."</h3>";
+		echo "<p>".__('Your archive file has been successfully uploaded!')."</p>";
 
-			if ($_GET['newfile'] == 1) {
-				update_option("cp_import_media_file", "");
-				$this->media_file = "";
-			}
+		echo "<h3>".__('Step 4: Upload Your Media File')."</h3>";
 
-			echo "<p>".__('<b>REMEMBER</b> to upload the contents of your media <u>folder</u> (paperXXXX) to '.$this->media_dir.'. The importer will look for the files referenced in your media <u>file</u> in this location.');
-			echo "<b> ".__('Do this before proceeding!')."</b></p>";
+		echo "<p>".__('<b>REMEMBER</b> to upload the contents of your media <u>folder</u> (paperXXXX) to '.$this->media_dir.'. The importer will look for the files referenced in your media <u>file</u> in this location.');
+		echo "<b> ".__('Do this before proceeding!')."</b></p>";
+	
+		wp_import_upload_form("tools.php?page=cp-import/cp-import.php&amp;step=3");
+		echo "<p><strong>".__('OR')."</strong></p>";
+		echo "<form method='post' action='tools.php?page=cp-import/cp-import.php&amp;step=3'>";
+		echo __('Enter the path of a media file already on your webserver:');
+		echo " <input type='text' name='media_file_typed' size='25' value='".$this->options['media_file']."'/>";
+		echo "<p><input type='submit' value='     ".__('Next')."     ' /></form>";
 
-			if (strlen($this->media_file)) {
-				// User has already uploaded a media file
-				echo "<p>".__('CP Import has detected that you already uploaded a media file:')."</p>";
-				echo "<pre>".$this->media_file."</pre>";
-				echo "<p><a href=\"tools.php?page=cp-import/cp-import.php&amp;step=3&amp;archive=".$this->archive_file."\">".__('Yes, I want to use this file')."</a></p>";
-				echo "<p><a href=\"tools.php?page=cp-import/cp-import.php&amp;step=2&amp;newfile=1&amp;archive=".$this->archive_file."\">".__('No, I want to use a different file')."</a></p>";
-			}
-			else {
-				echo "<p>".__('Now, we need to upload your media file.')."</p>";
-				
-				wp_import_upload_form("tools.php?page=cp-import/cp-import.php&amp;step=3&archive=".$this->archive_file);
-			}
-		}
 		echo "</div>";
 		$this->ui_donate();
 		$this->ui_footer();
@@ -460,63 +367,59 @@ class CP_Import {
 
 		$file = wp_import_handle_upload();
 
-		if (isset($file['file']) || !empty($this->media_file)) {
+		if (isset($file['file']) )
+			$this->options['media_file'] = $file['file'];
+		else if ( isset($_POST['media_file_typed']) && is_file($_POST['media_file_typed']) )
+			$this->options['media_file'] = $_POST['media_file_typed'];
+		else
+			die($file['error']);
 
-			if (!isset($this->media_file))
-				$this->media_file = $file['file'];
-			else if (empty($this->media_file))
-				$this->media_file = $file['file'];
+		$this->save_options(); 
 			
-			update_option("cp_import_media_file", $this->media_file);
-			
-			echo "<p>".__('Media file successfully uploaded!')."</p>";
+		echo "<p>".__('Media file successfully uploaded!')."</p>";
 					
-			echo "<h3>".__('Step 6: Verify that everything is here')."</h3>";
+		echo "<h3>".__('Step 6: Verify that everything is here')."</h3>";
 					
-			echo "<p>".__('Checking for required files and folders...')."</p>";
-			echo "<ul><li>".__('<b>Archive file:</b> ');
-			if (file_exists($this->archive_file))
-				echo __(' okay!')."<pre>          ".basename($this->archive_file)."</pre></li>";
-			else
-				wp_die('Your archive file seems to have disappeared...<br/><br/>Make sure someone didn\'t accidentally delete it or that you didn\'t modify the URL that took you to this page.');
+		echo "<p>".__('Checking for required files and folders...')."</p>";
+		echo "<ul><li>".__('<b>Archive file:</b> ');
+		if (file_exists($this->options['archive_file']))
+			echo __(' okay!')."<pre>          ".basename($this->options['archive_file'])."</pre></li>";
+		else
+			wp_die('Your archive file seems to have disappeared...<br/><br/>Make sure someone didn\'t accidentally delete it or that you didn\'t modify the URL that took you to this page.');
 			
-			echo "<li>".__('<b>Media file:</b> ');
-			if (file_exists($this->media_file))
-				echo __(' okay!')."<pre>          ".basename($this->media_file)."</pre></li>";
-			else
-				wp_die('Your media file seems to have disappeared...');
+		echo "<li>".__('<b>Media file:</b> ');
+		if (file_exists($this->options['media_file']))
+			echo __(' okay!')."<pre>          ".basename($this->options['media_file'])."</pre></li>";
+		else
+			wp_die('Your media file seems to have disappeared...');
 
-			echo "<li>".__('<b>Media folder:</b> ');
-			if (	is_dir($this->media_dir) &&
-				is_dir($this->media_dir."/stills") &&
-				is_dir($this->media_dir."/audio") &&
-				is_dir($this->media_dir."/video")
-				)
-				echo __(' okay!')."<pre>          ".$this->media_dir_h."</pre></li></ul>";
-			else {
-				wp_die('Your media folder was not uploaded correctly. '.
-				'Remember that you needed to do this manually. '.
-				'You need to upload the <b>contents</b> of the <b>paperXXXX</b> folder '.
-				'that CP gave you to <b>'.$this->media_dir_h.'</b>. If done correctly, the '.
-				'file structure should look similar to this:<br/><br/>'.$this->media_dir.'/audio<br/>'.
-				''.$this->media_dir.'/stills<br/>'.$this->media_dir.'/video<br/><br/>Once you\'ve '.
-				'uploaded the media folder, refresh this page to try again.');
-			}
+		echo "<li>".__('<b>Media folder:</b> ');
+		
+		if (	is_dir($this->options['media_dir']) &&
+			is_dir($this->options['media_dir']."/stills") &&
+			is_dir($this->options['media_dir']."/audio") &&
+			is_dir($this->options['media_dir']."/video")
+		)
+			echo __(' okay!')."<pre>          ".$this->options['media_dir_hr']."</pre></li></ul>";
+		else {
+			wp_die('Your media folder was not uploaded correctly. '.
+			'Remember that you needed to do this manually. '.
+			'You need to upload the <b>contents</b> of the <b>paperXXXX</b> folder '.
+			'that CP gave you to <b>'.$this->options['media_dir_hr'].'</b>. If done correctly, the '.
+			'file structure should look similar to this:<br/><br/>'.$this->options['media_dir_hr'].'audio<br/>'.
+			''.$this->options['media_dir_hr'].'stills<br/>'.$this->options['media_dir_hr'].'video<br/><br/>Once you\'ve '.
+			'uploaded the media folder, refresh this page to try again.');
+		}
 
-			echo __('<p>Everything looks good! Now comes the time for the main event! Once you click the button '.
-			'below, Wordpress is going to be working for a while. If you experience any errors about "timing-out" '.
-			'or "too large", you\'ll need to break your archive file into smaller chunks. If that happens, you\'ll '.
-			'still need to go through the motions of this importer with each of the smaller chunks, but you DO NOT '.
-			'need to re-upload your media folder. If any other weird errors happen, '.
-			'<a href="http://wordpress.org/tags/cp-import">see the documentation</a>. Good luck, and happy Wordpress\'ing!</p>');
+		echo __('<p>Everything looks good! Now comes the time for the main event! Once you click the button '.
+		'below, Wordpress is going to be working for a while. If you experience any errors about "timing-out" '.
+		'or "too large", you\'ll need to break your archive file into smaller chunks. If that happens, you\'ll '.
+		'still need to go through the motions of this importer with each of the smaller chunks, but you DO NOT '.
+		'need to re-upload your media folder. If any other weird errors happen, '.
+		'<a href="http://wordpress.org/tags/cp-import">see the documentation</a>. Good luck, and happy Wordpress\'ing!</p>');
 			
 			echo "<p><form action='tools.php?page=cp-import/cp-import&step=4&archive=".$this->archive_file."&media=".$this->media_file."' method='post'><input type='submit' class='button' value='".__('Import my College Publisher Archives!')."' /></form></p>";
 			
-		}
-		else {
-			echo "<p>".__('Your media file wasn\'t uploaded...that\'s wierd...')."</p>";
-		}
-		
 		echo "</div>";
 		$this->ui_donate();
 		$this->ui_footer();
@@ -996,7 +899,7 @@ class CP_Import {
 							
 								// make sure that the file refereneced exists
 								if (!file_exists(WP_CONTENT_DIR."/cp-import".$img['file']))
-									echo __('File not found: ')."<b>".$this->media_dir_h.$img['file']."</b><br />";
+									echo __('File not found: ')."<b>".$this->media_dir_hr.$img['file']."</b><br />";
 								else {
 									// determine paths where this media will be saved at
 									$rel_path = date("Y") . "/" . date("m") . "/" . basename ($img['file']);	
