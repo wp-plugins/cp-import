@@ -19,8 +19,8 @@
  *
  * @filesource
  */
-require("cp-import.class.php");
-require("cp-import-prepare.class.php");
+require("classes/cp-import.class.php");
+require("classes/cp-import-prepare.class.php");
 
 /**
  * 
