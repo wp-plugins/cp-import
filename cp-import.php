@@ -28,8 +28,9 @@ require("cp-import-prepare.class.php");
 function cp_import_admin_menu() {
 	require_once (ABSPATH . '/wp-admin/admin-functions.php');
 	add_menu_page('CP Import', 'CP Import', 'manage_options', 'cp-import', 'cp_import_init');
-	add_submenu_page(__FILE__, 'CP Import &raquo; Import', 'CP Import &raquo; Import', 'Import', 'manage_options', 'cp_import_init');
-	add_management_page('CP Import', 'CP Import', 9, __FILE__, 'cp_import_init');
+	add_submenu_page('cp-import', 'CP Import &raquo; Import', 'Import', 'manage_options', 'cp_import/import', 'cp_import_init');
+	add_submenu_page('cp-import', 'CP Import &raquo; Settings', 'Settings', 'manage_options', 'cp_import/settings', 'cp_import_init');
+	
 }
 
 /**
