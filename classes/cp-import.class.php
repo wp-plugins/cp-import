@@ -57,6 +57,10 @@ class CP_Import {
 		update_option("cp-import-options", $this->options);
 	}
 
+	static function ui_logo() {
+		return "<div style='padding: 20px 0px;'><img src='".get_bloginfo('home')."/wp-content/plugins/cp-import/img/cpimport.gif' /></div>";
+	}	
+
 	/*
 	 * ui_header
 	 *
@@ -66,7 +70,7 @@ class CP_Import {
 	 */
 	function ui_header() {
 		echo "<div class='wrap'>\n";
-		echo "<div style='padding: 20px 0px 0px 0px;'><img src='".get_bloginfo('home')."/wp-content/plugins/cp-import/img/cpimport.gif'</div>";
+		echo "<div style='padding: 20px 0px 0px 0px;'><img src='".get_bloginfo('home')."/wp-content/plugins/cp-import/img/cpimport.gif'/></div>";
 		echo "<p>";
 
 		if (is_numeric($this->step))

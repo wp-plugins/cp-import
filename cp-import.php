@@ -19,8 +19,11 @@
  *
  * @filesource
  */
+define (CP_IMPORT_DIR, dirname(__FILE__));
+
 require("classes/cp-import.class.php");
 require("classes/cp-import-prepare.class.php");
+require("classes/cp-import-settings.class.php");
 
 /**
  * 
@@ -29,32 +32,24 @@ function cp_import_admin_menu() {
 	require_once (ABSPATH . '/wp-admin/admin-functions.php');
 	add_menu_page('CP Import', 'CP Import', 'manage_options', 'cp-import', 'cp_import_init');
 	add_submenu_page('cp-import', 'CP Import &raquo; Import', 'Import', 'manage_options', 'cp_import/import', 'cp_import_init');
-	add_submenu_page('cp-import', 'CP Import &raquo; Settings', 'Settings', 'manage_options', 'cp_import/settings', 'cp_import_init');
+	add_submenu_page('cp-import', 'CP Import &raquo; Settings', 'Settings', 'manage_options', 'cp_import/settings', 'cp_import_settings');
 	
+}
+
+function cp_import_settings() {
+        $CPSettings = new CP_Import_Settings();
+        $CPSettings->purge();
+	$CPSettings->upgrade();
+	$CPSettings->ui_screen();
 }
 
 /**
  *
  */
 function cp_import_init() {
-	$options =  array (
-		'paper_id' => '', 
-		'from_version' => 4,
-		'users' => 'accounts',
-		'default_user' => 1,
-		'verbose' => false,
-		'date_fmt' =>'Y-m-d H:i:s',
-		'cp4url' => '"/media/storage/paper%s/news/%year%/%monthnum%/%day%/%category%/%postname%-%post_id%.shtml',
-		'cp5url' => '/%category%/%postname%-1.%post_id%"',
-		'media_dir' => WP_CONTENT_DIR."/cp-import/",
-		'media_dir_hr' => basename(dirname(WP_CONTENT_DIR."/cp-import/"))."/" . basename(WP_CONTENT_DIR."/cp-import/")."/",
-		'temp_dir' => plugin_dir_path(__FILE__)."tmp/",
-		'media_file' => "",
-		'archive_file' => "",
-	);
-
-	add_option("cp-import-options", $options);
-
+	$CPSettings = new CP_Import_Settings();
+	print_r($CPSettings);
+	$CPSettings->upgrade();
 
 	$CPImporter = new CP_Import();
 	
