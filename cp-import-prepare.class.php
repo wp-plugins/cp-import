@@ -11,10 +11,10 @@
 #
 # @copyright 2009 John Luetke
 #
-# $URL: http://svn.wp-plugins.org/cp-import/trunk/cp-import-prepare.pl $
-# $Revision: 139243 $
-# $Date: 2009-07-25 12:59:06 -0500 (Sat, 25 Jul 2009) $
-# $Author: johnl1479 $
+# $URL$
+# $Revision$
+# $Date$
+# $Author$
 #
 
 class CP_Import_Prepare {
@@ -270,20 +270,5 @@ class CP_Import_Prepare {
 		echo "</pre>";
 	}
 }
-
-function stripquotes($value) {
-		
-	$value = trim($value);
-
-	$f = substr($value, 0, 1);
-	$l = substr($value, -1, 1);
-
-	if ($f == $l && $f == '"') {
-		$value = substr($value, 1, -1);
-	}
-
-	return $value;
-}
-
 
 ?>
