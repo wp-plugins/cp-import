@@ -26,7 +26,8 @@ class CP_Import {
 	/**
 	 * @var boolean DEBUG
 	 */
-	var $DEBUG = true;
+	var $DEBUG = false;
+	var $settings;
 
 	/*
 	 * CP_Import
@@ -36,247 +37,49 @@ class CP_Import {
 	 * @since 1.0
 	 */
 	function CP_Import () {
-		global $wpdb;
-		
-		$this->step = (isset($_GET['step'])) ? $_GET['step'] : 1;
-
-		$this->options = get_option('cp-import-options');
-
-		if ($this->DEBUG)
-			echo "<pre>".print_r($this, true)."</pre>";
 	}
 
-	/**
-	 * save_options
-	 *
-	 * Saves $this->options to the database
-	 *
-	 * @since 2.0
-	 */
-	function save_options() {
-		update_option("cp-import-options", $this->options);
+	function load_settings($cpis) {
+		$this->settings = $cpis;
 	}
 
 	static function ui_logo() {
 		return "<div style='padding: 20px 0px;'><img src='".get_bloginfo('home')."/wp-content/plugins/cp-import/img/cpimport.gif' /></div>";
+	}
+
+	function ui_welcome_screen() {		
+
+		echo CP_Import::ui_logo();
+		?>
+		<div class='narrow' style='float: left;'>
+			<p>Hey there, this plugin makes moving from <a href='http://collegepublisher.com/'>College Publisher</a> (CP) to Wordpress a snap. Just follow the directions below and on the subsequent screens.</p>
+			<p>There are a few rules and guidelines, though. See the <a href='http://wordpress.org/tags/cp-import'>documentation</a> for the most up-to-date information.</p>
+			<p>Here is what you will need to use this importer:</p>
+			<ul>
+				<li>- Your archive file: Export_Story_Table_XXXX_XX-XX-XXXX.csv</li>
+				<li>- Your media file: Export_Story_Media_Table_XXX-XX-XX-XXXX.csv</li>
+				<li>- Your media folder (paperXXXX)</li>
+			</ul>
+		
+			<p>CP Import is not yet compatible with College Publisher 5. If you are coming from CP 5, please proceed at your own risk. If you can get me your export files, I will make this compatible with CP 5.</p>
+		
+			<h3>Prerequisite Actions</h3>
+			<p>Be sure to check out the <a href='admin.php?page=cp-import/settings'>Settings</a> page before importing to customize CP Import&apos;s behavior.</p>
+			<p>The following things must be done <b><i>BEFORE</i></b> you begin using this plugin:</p>
+			<ol>
+				<li>Upload the contents of your media folder to: <b><?php echo $this->settings->get('media_dir_hr')->getValue(); ?></b> Be warned: This will take a <i>long</i> time.</li>
+				<li>Due to default PHP settings, and the large size of College Publisher&apos;s export files, CP Import will automatically break your uploaded archive file into chunks of <a href='admin.php?page=cp-import/settings'><?php echo $this->settings->get('split_threshold')->getValue(); ?> articles</a>. This will prevent CP Import from running longer than PHP allows scripts to run and timing out</li>
+			</ol>
+		</div>
+		<?php
+
+		CP_Import::ui_donate();
 	}	
 
-	/*
-	 * ui_header
-	 *
-	 * Displays the header of the UI
-	 *
-	 * @since 1.0
-	 */
-	function ui_header() {
-		echo "<div class='wrap'>\n";
-		echo "<div style='padding: 20px 0px 0px 0px;'><img src='".get_bloginfo('home')."/wp-content/plugins/cp-import/img/cpimport.gif'/></div>";
-		echo "<p>";
-
-		if (is_numeric($this->step))
-			echo "<strong>";
-		else
-			echo "<a href=\"tools.php?page=cp-import/cp-import.php&amp;step=1\">";
-
-		echo __('Import');
-		
-		if (is_numeric($this->step))
-			echo "</strong>";
-		else
-			echo "</a>";
-
-		echo "&nbsp;|&nbsp;";
-		
-                if ($this->step == "options")
-			echo "<strong>";
-		else 
-			echo "<a href=\"tools.php?page=cp-import/cp-import.php&amp;step=options\">";
-	        
-		echo __('Options');
-		
-		if ($this->step == "options")
-			echo "</strong>";
-		else
-			echo "</a>";
-		
-		echo "</p>";
-							       
-	}
-
-	/*
-	 * ui_footer
-	 *
-	 * Closes the HTML printed by ui_header()
-	 *
-	 * @since 1.0
-	 */
-	function ui_footer () {
-		echo "</div>";
-	}
-	
-	function ui_donate () {
+	static function ui_donate () {
 		echo "<div style='float: left; width: 150px; text-align: center; margin-left: 10px; padding: 10px; background-color: #FFFAD4; border:1px solid #FF2700;'><h3>Please Donate</h3><form action='https://www.paypal.com/cgi-bin/webscr' method='post'><input type='hidden' name='cmd' value='_s-xclick'><input type='hidden' name='hosted_button_id' value='5789559'><input type='image' src='https://www.paypal.com/en_US/i/btn/btn_donateCC_LG.gif' border='0' name='submit' alt='PayPal - The safer, easier way to pay online!'><img alt='' border='0' src='https://www.paypal.com/en_US/i/scr/pixel.gif' width='1' height='1'></form><p>Thanks for using CP Import. I hope it saves you the headache experienced by me and others before me who have moved their newspapers from College Publisher to Wordpress.</p><p> Over 20 hours of coding, debugging, testing, and more debugging went into the creation of this plugin, and you'll be up and running in a fraction of that time. Please consider donating.</div>";
 	}
 
-	/*
-	 * ui_options()
-	 *
-	 * Displays customizable settings for CP Import's behavior
-	 *
-	 * @since 1.5
-	 */
-	function ui_options () {
-		$this->ui_header();
-?>
-		<div class='narrow' style='float: left;'>
-			<h3><?php echo _('Options');?></h3>
-			<form action="tools.php?page=cp-import/cp-import.php&amp;step=options&amp;saved=1" method="post">
-			<?php
-			if ($_POST) {
-
-				if ($this->DEBUG) echo "<pre>".print_r($_POST, true)."</pre>";
-
-				update_option("cp_import_from", $_POST['import_from']);
-				update_option("cp_import_user", $_POST['create_users']);
-				update_option("cp_import_default_user", $_POST['default_user']);
-				update_option("cp_import_username_before", $_POST['username_before']);
-				update_option("cp_import_username_after", $_POST['username_after']);
-				update_option("cp_import_paper_id", $_POST['paper_id']);
-				update_option("cp_import_verbose", $_POST['verbose']);
-
-				// Refresh options
-				$this->paper_id		= $_POST['paper_id'];
-				$this->default_user	= $_POST['default_user'];
-				$this->import_from 	= $_POST['import_from'];
-				$this->user_type 	= $_POST['create_users'];
-				$this->username_prefix	= $_POST['username_before'];
-				$this->username_suffix	= $_POST['username_after'];
-				$this->verbose		= $_POST['verbose'];
-
-				if ($_POST['url_structure'] == 1 && $_POST['paper_id'] != "") { // CP URL's
-					switch ($_POST['import_from']) {
-						case 4:
-						default:
-							update_option("permalink_structure", $this->cp4link);
-							break;
-						case 5:
-							update_option("permalink_structure", $this->cp5link);
-							break;
-					}
-				}
-			?>
-			<div id="message" class="updated fade"> 
-				<strong><p>Options Saved!</p></strong>
-				<?php if ($_POST['url_structure'] == 1) { ?>
-				<p><strong>Addtional Action Required:</strong> To activate your new Permalink style, you need to go to the <a href="options-permalink.php">Permalink Page</a> and click "Save Changes".</p>
-				<?php } ?>
-			</div>
-			<?php
-			
-			}
-			?>
-			
-			<table>
-				<tr>
-					<td valign="top"  width="20%">Import From:</td>
-					<td valign="top"  width="20%"><input type="radio" name="import_from" value="4" checked="checked"/>&nbsp;CP 4<br/><input type="radio" name="import_from" value="5" disabled="disabled"/>&nbsp;CP 5</td>
-					<td valign="top"  width="40%">Which version of College Publisher are you importing from?</td>
-				</tr>
-				<tr><td valign="top" >&nbsp;</td></tr>
-				<tr>
-					<td valign="top" >Import Authors as:</td>
-					<td valign="top" >
-						<input type="radio" name="create_users" value="accounts" group="create_users" <?php echo (($this->user_type == "accounts") ? "checked='checked' " : ""); ?>/>&nbsp;Wordpress Accounts<br />
-						<input type="radio" name="create_users" value="fields" group="create_users" <?php echo (($this->user_type == "fields") ? "checked='checked' " : ""); ?>/>&nbsp;Custom Field<br />
-						<input type="radio" name="create_users" value="none" group="create_users" <?php echo (($this->user_type == "none") ? "checked='checked' " : ""); ?>/>&nbsp;None
-					</td>
-					<td valign="top" >
-						CP Import can either create a Wordpress User account for each author that it finds, or add that information to each post as a custom field.<br /><br />More options are below if you choose "Wordpress Account". If you choose "Custom Field", author data will be imported as-is from you Archive file.
-					</td>
-				</tr>
-				<tr><td valign="top" >&nbsp;</td></tr>
-				<tr>
-					<td valign="top" >Default User Account:</td>
-					<td valign="top" >
-						<?php $this->ui_userlist(); ?>
-					</td>
-					<td valign="top" >
-						If any kind of error occurs while attempting to import author data, or you chose to import article authors as Custom fields, which account should be used?
-					</td>
-				</tr>
-				<tr><td valign="top" >&nbsp;</td></tr>
-				<tr>
-					<td valign="top" >Username Format:</td>
-					<td valign="top" >
-						<input type="text" name="username_before" size="15" value="<?php echo $this->username_prefix;?>"/>
-						%username%
-						<input type="text" name="username_after" size="15" value="<?php echo $this->username_suffix;?>"/>
-					</td>
-					<td valign="top" >
-						If importing authors as Wordpress accounts, how should thier username be formatted? <strong>%username%</strong> is automatically created by CP Import as <pre>firstname.lastname</pre>
-					</td>
-				</tr>
-				<tr><td valign="top" >&nbsp;</td></tr>
-				<tr><td valign="top" >&nbsp;</td></tr>
-				<tr>
-					<td valign="top" >CP URL Structure?</td>
-					<td valign="top" >
-						<input type="checkbox" name="url_structure" value="1" />&nbsp;Enabled&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;CP Paper ID: <input type="text" size="5" maxlength="4" name="paper_id" value="<?php echo $this->paper_id;?>" />
-					</td>
-					<td valign="top" >
-						Would you like CP Import to set your permalink structure to mimic that of College Publisher? (Experimental).<br /><br />You can come back to change this later without having to re-import your articles.
-					</td>
-				</tr>
-				<tr><td valign="top" >&nbsp;</td></tr>
-				<tr><td valign="top" >&nbsp;</td></tr>
-				<tr>
-					<td align="top">Enable Verbose mode?</td>
-					<td valign="top"><input type="radio" name="verbose" value="1" group="verbose" <?php echo (($this->verbose) ? "checked='checked' " : ""); ?> disabled="disabled"/>&nbsp;&nbsp;&nbsp;Yes<br /><input type="radio" name="verbose" value="0" group="verbose" <?php echo ((!$this->verbose) ? "checked='checked' " : ""); ?> />&nbsp;&nbsp;&nbsp;No</td>
-					<td valign="top">Would you like additional output displayed when importing articles?</td>
-				</tr>
-				<tr><td valign="top" >&nbsp;</td></tr>
-				<tr><td valign="top" >&nbsp;</td></tr>
-				<tr>
-					<td valign="top" >
-						<input type="submit" value="Save Options" class="button" />
-					</td>
-				</tr>
-			</table>
-			</form>
-		</div>
-<?php
-		$this->ui_donate();
-		$this->ui_footer();
-
-	}
-
-	/**
-	 * ui_userlist
-	 *
-	 * Echos a drop-down list of all the user accounts on this instance
-	 *
-	 * @return HTML select list
-	 *
-	 * @since 1.5
-	 */
-	function ui_userlist() {
-		global $wpdb;
-	
-		$users = $wpdb->get_col( $wpdb->prepare("SELECT $wpdb->users.ID FROM $wpdb->users ORDER BY %s ASC", "display_name" ));
-
-		$xhtml = "<select name='default_user'>";
-
-		foreach ($users as $user) {
-			
-			$user = get_userdata( $user );
-			$xhtml .= "<option value='".$user->ID."' ".(($this->default_user == $user->ID) ? "selected='selected'" : "")."/>".(($user->first_name) ? $user->display_name : $user->user_login);
-		}
-
-		$xhtml .= "</select>";
-
-		echo $xhtml;
-	}
-	
 	/*
 	 * ui_step1
 	 *
@@ -284,37 +87,22 @@ class CP_Import {
 	 *
 	 * @since 1.0
 	 */
-	function ui_step1 () {
-		$this->ui_header();
-		echo "<div class='narrow' style='float: left;'>";
-		echo "<p>".__('Hey there, this plugin makes moving from <a href="http://collegepublisher.com/">College Publisher</a> (CP) to Wordpress a snap. Just follow the directions below and on the subsequent screens.')."</p>";
-		echo "<p>".__('There are a few rules and guidelines, though. See the <a href="http://wordpress.org/tags/cp-import">documentation</a> for the most up-to-date information.')."</p>";
-		echo "<p>".__('Here is what you will need to use this importer:')."</p>";
-		echo "<ul>";
-		echo "<li>".__('- Your archive file: Export_Story_Table_XXXX_XX-XX-XXXX.csv')."</li>";
-		echo "<li>".__('- Your media file: Export_Story_Media_Table_XXX-XX-XX-XXXX.csv')."</li>";
-		echo "<li>".__('- Your media folder (paperXXXX)')."</li>";
-		echo "</ul>";
+	function ui_import () {
+		echo CP_Import::ui_logo();
+		?>
+		<div class='narrow' style='float: left'>
+
+		<h3>Step 3: Specify your archive file</h3>
+		<?php wp_import_upload_form("admin.php?page=cp-import/cp-import.php&amp;step=2"); ?>
+		<p><strong>OR</strong></p>
+		<form method='post' action='admin.php?page=cp-import/cp-import.php&amp;step=2'>
+		Enter the path of an archive file already on your webserver:
+		<input type='text' name='archive_file_typed' size='25' value='<?php echo $this->settings->get('archive_file')->getValue(); ?>'/>
+		<p><input type='submit' value='     Next     ' /></form>
 		
-		echo "<p>".__('CP Import is not yet compatible with College Publisher 5. If you are coming from CP 5, please proceed at your own risk. If you can get me your export files, I will make this compatible with CP 5.')."</p>";
-		
-		echo "<h3>".__('Prerequisite Actions')."</h3>";
-		echo "<p>".__('Be sure to check out the <a href="tools.php?page="cp-import/cp-import.php&amp;step=options">Options</a> page before importing to customize CP Import\'s behavior.')."</p>";
-		echo "<p>".__('The following things must be done <b><i>BEFORE</i></b> you begin using this plugin:')."</p>";
-		echo "<ol>";
-		echo "<li>".__('Upload the contents of your media folder to:')." <b>".$this->options['media_dir_hr']."</b> ".__('Be warned: This will take a <i>long</i> time.')."</li>";
-		echo "<li>".__('Due to default PHP settings, and the large size of College Publisher&apos;s export files, CP Import will automatically break your uploaded archive file into chunks of 1000 articles. This will prevent CP Import from running longer than PHP allows scripts to run and "timing out".')."</li>";
-		echo "</ol>";
-		echo "<h3>".__('Step 3: Specify your archive file')."</h3>";
-		wp_import_upload_form("tools.php?page=cp-import/cp-import.php&amp;step=2");
-		echo "<p><strong>".__('OR')."</strong></p>";
-		echo "<form method='post' action='tools.php?page=cp-import/cp-import.php&amp;step=2'>";
-		echo __('Enter the path of an archive file already on your webserver:');
-		echo " <input type='text' name='archive_file_typed' size='25' value='".$this->options['archive_file']."'/>";
-		echo "<p><input type='submit' value='     ".__('Next')."     ' /></form>";
-		echo "</div>";
-		$this->ui_donate();
-		$this->ui_footer();
+		</div>
+		<?php
+		CP_Import::ui_donate();
 	}
 
 	/*
@@ -339,19 +127,19 @@ class CP_Import {
 
 		$this->save_options();
 
-		echo "<p>".__('Your archive file has been successfully uploaded!')."</p>";
+		echo "<p>Your archive file has been successfully uploaded!</p>";
 
-		echo "<h3>".__('Step 4: Upload Your Media File')."</h3>";
+		echo "<h3>Step 4: Upload Your Media File</h3>";
 
 		echo "<p>".__('<b>REMEMBER</b> to upload the contents of your media <u>folder</u> (paperXXXX) to '.$this->media_dir.'. The importer will look for the files referenced in your media <u>file</u> in this location.');
-		echo "<b> ".__('Do this before proceeding!')."</b></p>";
+		echo "<b> Do this before proceeding!</b></p>";
 	
-		wp_import_upload_form("tools.php?page=cp-import/cp-import.php&amp;step=3");
-		echo "<p><strong>".__('OR')."</strong></p>";
-		echo "<form method='post' action='tools.php?page=cp-import/cp-import.php&amp;step=3'>";
+		wp_import_upload_form("admin.php?page=cp-import/cp-import.php&amp;step=3");
+		echo "<p><strong>OR</strong></p>";
+		echo "<form method='post' action='admin.php?page=cp-import/cp-import.php&amp;step=3'>";
 		echo __('Enter the path of a media file already on your webserver:');
 		echo " <input type='text' name='media_file_typed' size='25' value='".$this->options['media_file']."'/>";
-		echo "<p><input type='submit' value='     ".__('Next')."     ' /></form>";
+		echo "<p><input type='submit' value='     Next     ' /></form>";
 
 		echo "</div>";
 		$this->ui_donate();
@@ -380,11 +168,11 @@ class CP_Import {
 
 		$this->save_options(); 
 			
-		echo "<p>".__('Media file successfully uploaded!')."</p>";
+		echo "<p>Media file successfully uploaded!</p>";
 					
-		echo "<h3>".__('Step 6: Verify that everything is here')."</h3>";
+		echo "<h3>Step 6: Verify that everything is here</h3>";
 					
-		echo "<p>".__('Checking for required files and folders...')."</p>";
+		echo "<p>Checking for required files and folders...</p>";
 		echo "<ul><li>".__('<b>Archive file:</b> ');
 		if (file_exists($this->options['archive_file']))
 			echo __(' okay!')."<pre>          ".basename($this->options['archive_file'])."</pre></li>";
@@ -422,7 +210,7 @@ class CP_Import {
 		'need to re-upload your media folder. If any other weird errors happen, '.
 		'<a href="http://wordpress.org/tags/cp-import">see the documentation</a>. Good luck, and happy Wordpress\'ing!</p>');
 			
-			echo "<p><form action='tools.php?page=cp-import/cp-import&step=4&archive=".$this->archive_file."&media=".$this->media_file."' method='post'><input type='submit' class='button' value='".__('Import my College Publisher Archives!')."' /></form></p>";
+			echo "<p><form action='admin.php?page=cp-import/cp-import&step=4&archive=".$this->archive_file."&media=".$this->media_file."' method='post'><input type='submit' class='button' value='Import my College Publisher Archives!' /></form></p>";
 			
 		echo "</div>";
 		$this->ui_donate();
@@ -931,7 +719,7 @@ class CP_Import {
 						} // end if media. */
 						
 						// congratualtions!
-						echo "&nbsp;&nbsp;&nbsp;".__('done!')."</i><br/>";
+						echo "&nbsp;&nbsp;&nbsp;done!</i><br/>";
 						$count++;
 					} // end non-numeric
 				} // end while
@@ -940,8 +728,8 @@ class CP_Import {
 
 					
 				echo "<p>".$count.__(' articles were successfully imported!')."</p>";
-				echo "<p>".__('Congratulations! Your CP archive has been successfully imported to Wordpress! Have fun!')."</p>";
-				echo "<p><a href='tools.php?page=cp-import/cp-import.php'>".__('Import again')."</a></p>";
+				echo "<p>Congratulations! Your CP archive has been successfully imported to Wordpress! Have fun!</p>";
+				echo "<p><a href='admin.php?page=cp-import/cp-import.php'>Import again</a></p>";
 				$this->ui_footer();
 				break;
 				

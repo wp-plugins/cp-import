@@ -48,6 +48,7 @@ class CP_Import_Settings {
 		$options[] = new CP_Import_Option('cp_permalinks', '0', 'CP Import can also set your Wordpress permalinks to mimic that of College Publisher. If you turn this on, please remeber to enter your College Publisher Paper ID below.', true, 'radio', array('1' => 'Yes', '0' => 'No'));
 		$options[] = new CP_Import_Option('paper_id', '', 'Your College Publisher Paper ID (Required if you choose to mimic CP Permalinks above)', true);
 		$options[] = new CP_Import_Option('cp_redirect', '1', 'If you do not want to set your permalinks to mimic that of College Publisher, CP Import can attempt to redirect your old College Publisher links to your new Wordpress ones. (Based on <a href="http://wordpress.org/extend/plugins/cp-redirect/">CP Redirect</a> written by <a href="http://danielbachhuber.com/">Daniel Bachhuber</a> of <a href="http://copress.org/">CoPress</a>)', true, 'radio', array( '1' => 'Enable', '0' => 'Disable'));
+		$options[] = new CP_Import_Option('split_threshold', 1000, 'During the Import process, CP Import will automatically split your archive file into smaller files for easier processing. How many articles should each of these smaller files have?', true, 'text'); 
 		$options[] = new CP_Import_Option('media_dir', WP_CONTENT_DIR."/cp-import/");
 		$options[] = new CP_Import_Option('media_dir_hr', basename(dirname(WP_CONTENT_DIR."/cp-import/"))."/" . basename(WP_CONTENT_DIR."/cp-import/")."/");
 		$options[] = new CP_Import_Option('temp_dir', plugin_dir_path(__FILE__)."tmp/");
@@ -169,21 +170,21 @@ class CP_Import_Settings {
 	}
 
 	public function ui_screen() {
-		//echo "<pre>".print_r($this, true);
 		echo CP_Import::ui_logo();
 
 		if ($_POST)
 			$this->ui_process_post();
 
 		?>
+		<div class='narrow' style='float: left'>
 		<form method='post' action='<?php echo $_SERVER['PHP_SELF']; ?>?page=cp_import/settings'>
-		<table>
+		<table width='100%'>
 			<?php
 			foreach ($this->options as $option) { 
 				if ($option->isEditable()) {
 			?>
 			<tr>
-				<td valign='top' width='40%'>
+				<td valign='top' width='60%'>
 					<?php echo $option->getDescription(); ?>
 				</td>
 				<td valign='top' width='40%'>
@@ -229,7 +230,10 @@ class CP_Import_Settings {
 		</table>
 		<input type='submit' value='Save Settings'>
 		</form>
+		</div>
 		<?php
+
+		CP_Import::ui_donate();
 	}
 
 }
