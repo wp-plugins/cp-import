@@ -30,6 +30,7 @@ class CP_Import_FileSplitter{
 	function run () {
 		$i = 0;
 		$j = 1;
+		$files = array();
 
 		$date = date("Ymd");
 		$handle = @fopen ($this->_source, "r");
@@ -44,6 +45,8 @@ class CP_Import_FileSplitter{
 
 				if (!$fhandle = @fopen($fname, 'w')) die("Cannot open file $fname");
 				if (!@fwrite($fhandle, $buffer)) die("Cannot write to file $fname");
+		
+				$files[] = $fname;
 			}
 
 			fclose($fhandle);
@@ -53,6 +56,8 @@ class CP_Import_FileSplitter{
 		}
 
 		fclose ($handle);
+
+		return $files;
 	}
 }
 ?>

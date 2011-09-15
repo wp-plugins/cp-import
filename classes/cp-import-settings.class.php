@@ -35,7 +35,7 @@ class CP_Import_Settings {
 
 	public function upgrade() {
 		
-		$options[] = new CP_Import_Option('from_version', 4, 'Which version of College Publisher are you importing from?', true, 'radio', array ('4' => 'CP 4')); //, '5' => 'CP 5'));
+		$options[] = new CP_Import_Option('from_version', 4, 'Which version of College Publisher are you importing from?', true, 'radio', array ('4' => 'CP 4', '5' => 'CP 5'));
 		$options[] = new CP_Import_Option('users', 'accounts', 'CP Import can either create a Wordpress User account for each author that it finds, or add that information to each post as a custom field.<br /><br />More options are below if you choose "Wordpress Account". If you choose "Custom Field", author data will be imported as-is from you Archive file.', true, 'radio', array('accounts' => 'Wordpress Account', 'custom_field' => 'Custom Field', 'none' => 'None'));
 		$options[] = new CP_Import_Option('default_user', 1, 'If any kind of error occurs while attempting to import author data, or you chose to import article authors as Custom Fields, which account should have credit for having written the imported articles?', true, 'select', get_users_of_blog());
 		$options[] = new CP_Import_Option('uname_prefix', '', 'If you choose to create Wordpress Accounts for each author, CP Import automatically names the account <em>firstname.lastname</em>. However, you can prefix this with whatever you want', true);
@@ -89,6 +89,10 @@ class CP_Import_Settings {
 		}
 
 		return null;
+	}
+
+	public function value($option) {
+		return $this->get($option)->getValue();
 	}
 
 	public function set($option, $value) {
@@ -177,7 +181,7 @@ class CP_Import_Settings {
 
 		?>
 		<div class='narrow' style='float: left'>
-		<form method='post' action='<?php echo $_SERVER['PHP_SELF']; ?>?page=cp_import/settings'>
+		<form method='post' action='<?php echo $_SERVER['PHP_SELF']; ?>?page=cp-import/settings'>
 		<table width='100%'>
 			<?php
 			foreach ($this->options as $option) { 

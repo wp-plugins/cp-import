@@ -28,6 +28,7 @@ class CP_Import {
 	 */
 	var $DEBUG = false;
 	var $settings;
+	const form_action = "admin.php?page=cp-import/import";
 
 	/*
 	 * CP_Import
@@ -37,6 +38,7 @@ class CP_Import {
 	 * @since 1.0
 	 */
 	function CP_Import () {
+		$this->step = $_REQUEST['step'];
 	}
 
 	function load_settings($cpis) {
@@ -89,61 +91,180 @@ class CP_Import {
 	 */
 	function ui_import () {
 		echo CP_Import::ui_logo();
-		?>
-		<div class='narrow' style='float: left'>
+		echo "<div class='narrow' style='float: left'>";
 
-		<h3>Step 3: Specify your archive file</h3>
-		<?php wp_import_upload_form("admin.php?page=cp-import/cp-import.php&amp;step=2"); ?>
+		switch($this->step) {
+			default:
+			case 1:
+		?>
+		<p><strong>BEFORE PROCEEDING: </strong>Please ensure that you have completed the necessary <a href="admin.php?page=cp-import">prework</a> before continuing.</p>
+		<h3>Step 1: Specify your archive file</h3>
+		<?php wp_import_upload_form(CP_Import::form_action."&amp;step=2"); ?>
 		<p><strong>OR</strong></p>
-		<form method='post' action='admin.php?page=cp-import/cp-import.php&amp;step=2'>
+		<form method='post' action='<?php echo CP_Import::form_action;?>&amp;step=2'>
 		Enter the path of an archive file already on your webserver:
 		<input type='text' name='archive_file_typed' size='25' value='<?php echo $this->settings->get('archive_file')->getValue(); ?>'/>
 		<p><input type='submit' value='     Next     ' /></form>
 		
+		<?php
+				break;
+			case 2:
+				$file = wp_import_handle_upload();
+				if ( isset($file['file']) )
+					$this->settings->set('archive_file', $file['file']);
+				else if ( isset($_REQUEST['archive_file_typed']) && is_file($_REQUEST['archive_file_typed']) )
+					$this->settings->set('archive_file', $_REQUEST['archive_file_typed']);
+				else
+					wp_die($file['error']);
+
+		?>
+		<div class='updated'>
+			<p>Archive file uploaded! (<?php echo $this->settings->value('archive_file');?>)</p>
 		</div>
 		<?php
+
+				$this->settings->save();
+		?>
+		<h3>Step 2: Upload Your Media File</h3>
+		<p><strong>REMEMBER</strong> to upload the contents of your media <u>folder</u> (paperXXXX) to <strong><?php echo $this->settings->value('media_dir');?></strong>. The importer will look for the files referenced in your media <u>file</u> in this location. <strong>Do this before proceeding!</strong></p>
+		<?php if (true) { //$this->settings->get('from_version')->getValue() == "5") { ?>
+
+
+		
+		<?php } else { ?>
+		wp_import_upload_form(CP_Import::form_action."&amp;step=3"); ?>
+		<p><strong>OR</strong></p>
+		<form method='post' action='<?php echo CP_Import::form_action;?>&amp;step=3'>
+		Enter the path of a media file already on your webserver:
+		<input type='text' name='media_file_typed' size='25' value='<?php echo $this->settings->value('media_file');?>'/>
+		<p><input type='submit' value='     Next     ' /></form>
+
+		<?php
+			}
+				break;
+			case 3:
+				$file = wp_import_handle_upload();
+				if ( isset($file['file']) )
+					$this->settings->set('media_file', $file['file']);
+				else if ( isset($_REQUEST['media_file_typed']) && is_file($_REQUEST['media_file_typed']) )
+					$this->settings->set('media_file', $_REQUEST['media_file_typed']);
+				else
+					wp_die($file['error']);
+
+		?>
+		<div class='updated'>
+			<p>Media file uploaded! (<?php echo $this->settings->value('media_file');?>)</p>
+		</div>
+		<?php
+
+				$this->settings->save();
+		?>		
+		<h3>Step 3: Verify that everything is here</h3>
+		<p>Checking for required files and folders...</p>
+		<?php $this->ensure_exists(); ?>
+
+		<p>Everything looks good!</p>
+
+		<p>Once you click the button below, your archive file will automatically be parsed into a properly-formatted CSV file, such as having linebreaks encoding into HTML, special characters encoded into HTML, and the like. During testing, this process only took about 3 minutes for over 11,000 articles. Go grab a drink while your waiting.</p>
+
+		<p>You MIGHT encounter a script time-out after clicking the button. If this occurs, you will need to change PHP's 'max_execution_time' setting.</p>
+
+		<p><form action='<?php echo CP_Import::form_action;?>&amp;step=4' method='post'><input type='submit' class='button' value='Properly format my College Publisher Archive!' /></form></p>
+		<?php		
+				break;
+			case 4:
+				$prep = new CP_Import_Prepare();
+				$outfile = CP_IMPORT_DIR."/tmp/cp-archive-formatted.csv";
+				
+		?>
+		<div id="output" style="height: 300px; width: 100%; overflow: auto;">
+			<?php //$prep->process($this->settings->value('archive_file'), $outfile); ?>
+		</div>
+		
+		<p>Formatting complete! It took <?php echo $prep->get_run_time();?> minutes.</p>
+		<?php
+				$this->settings->set('archive_file', $outfile);
+		?>
+		<p>CP Import is now going to split you archive file into chunks of <?php echo $this->settings->value('split_threshold');?> articles.</p>
+
+		<p><form action='<?php echo CP_Import::form_action;?>&amp;step=5' method='post'><input type='submit' class='button' value='Split my College Publisher Archive!' /></form></p>
+		<?php
+				break;
+			case 5:
+				$split = new CP_Import_FileSplitter();
+				$split->configure(
+					$this->settings->value('media_file'),
+					CP_IMPORT_DIR."/tmp/",
+					$this->settings->value('split_threshold')
+				);
+
+				$files = $split->run();
+
+				print_r($files);
+
+				break;
+		}
+		
+		echo "</div>";
+
 		CP_Import::ui_donate();
 	}
 
-	/*
-	 * ui_step2
-	 *
-	 * Grabs the uploaded archive file from ui_step1, and prompts for the user to upload their media folder to $this->media_dir and thier media file using a form
-	 *
-	 * @since 1.0
-	 */
-	function ui_step2 () {
-		$this->ui_header();
-		echo "<div class='narrow' style='float: left;'>";
-		
-		$file = wp_import_handle_upload();
 
-		if ( isset($file['file']) )
-			$this->options['archive_file'] = $file['file'];
-		else if ( isset($_POST['archive_file_typed']) && is_file($_POST['archive_file_typed']) )
-			$this->options['archive_file'] = $_POST['archive_file_typed'];
-		else
-			die($file['error']);
+	private function ensure_exists() {
 
-		$this->save_options();
+		$archive = $this->settings->value('archive_file');
+		$media   = $this->settings->value('media_file');
+		$media_dir = $this->settings->value('media_dir');
 
-		echo "<p>Your archive file has been successfully uploaded!</p>";
+		?>
+		<ul>
+			<li><b>Archive file:</b>&nbsp;
+		<?php
+		if (!file_exists($archive)) {
+			wp_die('Your archive file seems to have disappeared...<br/><br/>Make sure someone didn\'t accidentally delete it.');
+		}
+		else {	
+		?>
+			okay! <pre><?php echo $archive;?></pre>
+		<?php
+		}
+		?>
+			</li>
+			<li><b>Media file:</b>&nbsp;
+		<?php
+		if (!file_exists($media)) {
+			wp_die('Your media file seems to have disappeared...<br/><br/>Make sure someone didn\'t accidentally delete it.');
+		}
+		else {	
+		?>
+			okay! <pre><?php echo $media;?></pre>
+		<?php
+		}
+		?>
+			</li>
+			<li><b>Media folder:</b>&nbsp;
+		<?php
+		if (	!is_dir($media_dir) &&
+			!is_dir($media_dir."/stills") &&
+			!is_dir($media_dir."/audio") &&
+			!is_dir($media_dir."/video")
+		) {
+			wp_die('Your media folder was not uploaded correctly. '.
+			'Remember that you needed to do this manually. '.
+			'You need to upload the <b>contents</b> of the <b>paperXXXX</b> folder '.
+			'that CP gave you to <b>'.$media_dir.'</b>. If done correctly, the '.
+			'file structure should look similar to this:<br/><br/>'.$media_dir.'audio<br/>'.
+			''.$media_dir.'stills<br/>'.$media_dir.'video<br/><br/>Once you\'ve '.
+			'uploaded the media folder, refresh this page to try again.');
+		}
+		else {
+		?>
+			okay!
+		<?php	
+		}
 
-		echo "<h3>Step 4: Upload Your Media File</h3>";
-
-		echo "<p>".__('<b>REMEMBER</b> to upload the contents of your media <u>folder</u> (paperXXXX) to '.$this->media_dir.'. The importer will look for the files referenced in your media <u>file</u> in this location.');
-		echo "<b> Do this before proceeding!</b></p>";
-	
-		wp_import_upload_form("admin.php?page=cp-import/cp-import.php&amp;step=3");
-		echo "<p><strong>OR</strong></p>";
-		echo "<form method='post' action='admin.php?page=cp-import/cp-import.php&amp;step=3'>";
-		echo __('Enter the path of a media file already on your webserver:');
-		echo " <input type='text' name='media_file_typed' size='25' value='".$this->options['media_file']."'/>";
-		echo "<p><input type='submit' value='     Next     ' /></form>";
-
-		echo "</div>";
-		$this->ui_donate();
-		$this->ui_footer();
+		return true;
 	}
 
 	/*
@@ -167,51 +288,7 @@ class CP_Import {
 			die($file['error']);
 
 		$this->save_options(); 
-			
-		echo "<p>Media file successfully uploaded!</p>";
-					
-		echo "<h3>Step 6: Verify that everything is here</h3>";
-					
-		echo "<p>Checking for required files and folders...</p>";
-		echo "<ul><li>".__('<b>Archive file:</b> ');
-		if (file_exists($this->options['archive_file']))
-			echo __(' okay!')."<pre>          ".basename($this->options['archive_file'])."</pre></li>";
-		else
-			wp_die('Your archive file seems to have disappeared...<br/><br/>Make sure someone didn\'t accidentally delete it or that you didn\'t modify the URL that took you to this page.');
-			
-		echo "<li>".__('<b>Media file:</b> ');
-		if (file_exists($this->options['media_file']))
-			echo __(' okay!')."<pre>          ".basename($this->options['media_file'])."</pre></li>";
-		else
-			wp_die('Your media file seems to have disappeared...');
-
-		echo "<li>".__('<b>Media folder:</b> ');
 		
-		if (	is_dir($this->options['media_dir']) &&
-			is_dir($this->options['media_dir']."/stills") &&
-			is_dir($this->options['media_dir']."/audio") &&
-			is_dir($this->options['media_dir']."/video")
-		)
-			echo __(' okay!')."<pre>          ".$this->options['media_dir_hr']."</pre></li></ul>";
-		else {
-			wp_die('Your media folder was not uploaded correctly. '.
-			'Remember that you needed to do this manually. '.
-			'You need to upload the <b>contents</b> of the <b>paperXXXX</b> folder '.
-			'that CP gave you to <b>'.$this->options['media_dir_hr'].'</b>. If done correctly, the '.
-			'file structure should look similar to this:<br/><br/>'.$this->options['media_dir_hr'].'audio<br/>'.
-			''.$this->options['media_dir_hr'].'stills<br/>'.$this->options['media_dir_hr'].'video<br/><br/>Once you\'ve '.
-			'uploaded the media folder, refresh this page to try again.');
-		}
-
-		echo __('<p>Everything looks good! Now comes the time for the main event! Once you click the button '.
-		'below, Wordpress is going to be working for a while. If you experience any errors about "timing-out" '.
-		'or "too large", you\'ll need to break your archive file into smaller chunks. If that happens, you\'ll '.
-		'still need to go through the motions of this importer with each of the smaller chunks, but you DO NOT '.
-		'need to re-upload your media folder. If any other weird errors happen, '.
-		'<a href="http://wordpress.org/tags/cp-import">see the documentation</a>. Good luck, and happy Wordpress\'ing!</p>');
-			
-			echo "<p><form action='admin.php?page=cp-import/cp-import&step=4&archive=".$this->archive_file."&media=".$this->media_file."' method='post'><input type='submit' class='button' value='Import my College Publisher Archives!' /></form></p>";
-			
 		echo "</div>";
 		$this->ui_donate();
 		$this->ui_footer();
@@ -523,9 +600,6 @@ class CP_Import {
 		
 		// determine the step we are one
 		switch ( $this->step ) {
-			case 'options':
-				$this->ui_options();
-				break;
 			case 1:
 			default:
 				$this->ui_step1();

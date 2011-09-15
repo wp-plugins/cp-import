@@ -24,11 +24,10 @@ define (CP_IMPORT_DIR, dirname(__FILE__));
 require("classes/cp-import.class.php");
 require("classes/cp-import-prepare.class.php");
 require("classes/cp-import-settings.class.php");
+require("classes/cp-import-filesplitter.class.php");
 
 $CP_Import = new CP_Import();
 $CP_Import_Settings = new CP_Import_Settings();
-
-
 /**
  * 
  */

@@ -81,7 +81,28 @@ class CP_Import_Prepare {
 			echo "  <b>DEBUG:</b>  ".$msg."<br/><br/>";
 	}
 
+	function get_run_time() {
+		return ($this->end - $this->start) / 60;
+	}
+
 	function process ($in, $out) {
+		process_fromCP5($in, $out);
+	}
+
+	function process_fromCP5($in, $out) {
+		$this->start = time();
+		$this->debug = isset($_GET['debug']);
+		if ($this->debug) { echo "<pre>"; }
+		
+		if (!file_exists($in))
+			die ($in . " does not exist.");
+		
+
+		if ($this->debug) { echo "</pre>"; }
+		$this->end = time();
+	}
+
+	function process_fromCP4($in, $out) {
 		$this->start = time();
 		$this->debug = isset($_GET['debug']);
 		if ($this->debug) { echo "<pre>"; }
@@ -101,6 +122,8 @@ class CP_Import_Prepare {
 		if (!($this->output = fopen($out, "w")))
 		    die ("Could not open $out for writing.");
 		
+		set_time_limit(300);
+
 		while ( $this->line = fgets($this->input) ) {
 
 			$this->debug("Loop start");
