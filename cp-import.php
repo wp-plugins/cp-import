@@ -1,12 +1,13 @@
 <?php
 /*
- * Plugin Name: CP Import
- * Version: 1.5
- * Plugin URI: http://johnluetke.net/software/cp-import
- * Description: CP Import allows you to import your <b>articles, authors, categories, and media<b> from a College Publisher export file <br />[<a href="tools.php?page=cp-import/cp-import.php">Import</a> | <a href="http://johnluetke.net/software/cp-import">Help</a>]
- * Author: John Luetke
- * Author URI: http://johnluetke.net
- *
+Plugin Name: CP Import
+Version: 1.5
+Plugin URI: http://johnluetke.net/software/cp-import
+Description: CP Import allows you to import your <b>articles, authors, categories, and media<b> from a College Publisher export file <br />[<a href="tools.php?page=cp-import/cp-import.php">Import</a> | <a href="http://johnluetke.net/software/cp-import">Help</a>]
+Author: John Luetke
+Author URI: http://johnluetke.net
+*/
+/**
  * @package net.johnluetke.software.wordpress.cpimport
  *
  * @copyright 2009 John Luetke < john@johnluetke.net >
@@ -15,7 +16,6 @@
  * $Revision$
  * $Date$
  * $Author$
- *
  *
  * @filesource
  */
@@ -53,7 +53,7 @@ function cp_import_settings() {
 
 function cp_import_import() {
 	global $CP_Import, $CP_Import_Settings;;
-	$CP_Import->load_settings(&$CP_Import_Settings);
+	$CP_Import->load_settings($CP_Import_Settings);
 	$CP_Import->ui_import();
 }
 
@@ -65,7 +65,7 @@ function cp_import_init() {
 	$CP_Import_Settings->purge();	
 	$CP_Import_Settings->upgrade();
 
-	$CP_Import->load_settings(&$CP_Import_Settings);
+	$CP_Import->load_settings($CP_Import_Settings);
 	$CP_Import->ui_welcome_screen();
 }
 
